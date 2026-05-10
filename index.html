@@ -944,7 +944,9 @@ ul.schema li::before {
     <ul class="toc-list">
       <li><a href="#hero">Overview</a></li>
       <li><a href="#summary">Summary</a></li>
+      <li><a href="#comparisons">Comparisons</a></li>
       <li><a href="#best-config">Best Config</a></li>
+      <li><a href="#run-it-yourself">Run it Yourself</a></li>
       <li><a href="#what-worked">What Worked</a></li>
       <li><a href="#dense-31b" class="toc-sub">Dense 31B</a></li>
       <li><a href="#matrix-v2" class="toc-sub2">§1.1 Matrix-v2</a></li>
@@ -963,6 +965,7 @@ ul.schema li::before {
       <li><a href="#super-bench">Super-Bench</a></li>
       <li><a href="#timeline">Timeline</a></li>
       <li><a href="#open-questions">Open Questions</a></li>
+      <li><a href="#credits">Credits</a></li>
     </ul>
   </nav>
 </details>
@@ -976,7 +979,9 @@ ul.schema li::before {
       <ul class="toc-list">
         <li><a href="#hero">Overview</a></li>
         <li><a href="#summary">Summary</a></li>
+        <li><a href="#comparisons">Comparisons ★</a></li>
         <li><a href="#best-config">Best Config</a></li>
+        <li><a href="#run-it-yourself">Run it Yourself ★</a></li>
         <li><a href="#what-worked">What Worked</a></li>
         <li><a href="#dense-31b" class="toc-sub">Dense 31B</a></li>
         <li><a href="#matrix-v2" class="toc-sub2">§1.1 Matrix-v2</a></li>
@@ -991,11 +996,11 @@ ul.schema li::before {
         <li><a href="#tq3-frontier">TQ3 Frontier ★</a></li>
         <li><a href="#for-3090-users">For 3090 Users ★</a></li>
         <li><a href="#charts">Charts</a></li>
-        <li><a href="#what-failed">What Did Not Work</a></li>
         <li><a href="#discoveries">15 Discoveries</a></li>
         <li><a href="#super-bench">Super-Bench</a></li>
         <li><a href="#timeline">Timeline</a></li>
         <li><a href="#open-questions">Open Questions</a></li>
+        <li><a href="#credits">Credits</a></li>
       </ul>
     </nav>
   </aside>
@@ -1070,6 +1075,70 @@ ul.schema li::before {
       </div>
       <div class="prose-wrap">
         <p class="summary-coda"><code>feature/gemma4-support</code> ships three speculative-decode paths — <strong>none</strong>, <strong>MTP</strong> (Multi-Token Prediction assistant), and <strong>DFlash</strong> (block-diffusion drafter). MTP is functional but uneconomic at 64K+ (≤2 % accept) and remains an open investigation. The path to these results required <strong>15 distinct ggml/llama.cpp fixes</strong>, none of which exist upstream — see §3 Discoveries. Post-rebase (<code>daef232a6</code> + <code>4b0c158</code>): 1M TQ3 context confirmed on 24 GB, 256K ship config at <strong>67.95 tok/s</strong>.</p>
+      </div>
+    </section>
+
+    <!-- ── Comparisons ──────────────────────────────────────────── -->
+    <section class="section" id="comparisons">
+      <div class="wide-wrap">
+        <p class="section-eyebrow">Context</p>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('comparisons')">#</button>How we compare to public RTX 3090 + Gemma 4 numbers</h2>
+        <p class="lede">Gemma 4 was released 2026-04-02 — five weeks before these runs. Public benchmarks for this model on RTX 3090 hardware are sparse, and none publish long-context numbers. The table below compares what we measured against the best community-reported figures we found.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th class="num">Lucebox</th>
+                <th>Best public 3090</th>
+                <th>Source / notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>MoE 26B-A4B peak decode @ 4K</td>
+                <td class="num"><span class="badge-good">132.1 tok/s</span></td>
+                <td>80–110 typical; <a href="https://aiproductivity.ai/gemma4-benchmark/" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--border);">119 best</a></td>
+                <td>Q4_K_M, no spec decode in community reports</td>
+              </tr>
+              <tr>
+                <td>MoE 26B-A4B decode @ 256K</td>
+                <td class="num"><span class="badge-good">67.95 tok/s</span></td>
+                <td>No published 3090 number at 256K</td>
+                <td>Uncontested; Q8/Q8 + DFlash + pflash + dm=4</td>
+              </tr>
+              <tr>
+                <td>MoE 26B-A4B max context (24 GB)</td>
+                <td class="num"><span class="badge-good">1M @ 5.82 tok/s</span></td>
+                <td>No published 3090 1M number</td>
+                <td>Uncontested; TQ3/TQ3 KV, 22.26 GB VRAM, 1.7 GB headroom</td>
+              </tr>
+              <tr>
+                <td>Dense 31B peak decode @ 4K</td>
+                <td class="num"><span class="badge-good">~98 tok/s</span></td>
+                <td>40–50 <em style="color:var(--text-sec);font-size:0.88em;">(FA hangs in mainstream)</em></td>
+                <td><a href="https://github.com/ollama/ollama/issues/15350" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--border);">Ollama #15350</a> FA hang; <a href="https://craftrigs.com/gemma4-3090-benchmark" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--border);">craftrigs.com</a> reports 44 tok/s</td>
+              </tr>
+              <tr>
+                <td>Speculative AL — code / creative</td>
+                <td class="num"><span class="badge-good">5.22 / 5.12</span></td>
+                <td>No published 3090 + Gemma 4 drafter results</td>
+                <td>Uncontested; DFlash drafter; MoE code / Dense creative respectively</td>
+              </tr>
+              <tr>
+                <td>Dense 64K decode (TQ3, no drafter)</td>
+                <td class="num"><span class="badge-good">2.54 tok/s</span></td>
+                <td>No published comparable</td>
+                <td>Post-rebase; 64K cliff resolved (was 1.78 tok/s anomaly)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="caveat-note">
+          <strong>Coverage caveat.</strong> Gemma 4 was released 2026-04-02. As of 2026-05-10, llama.cpp does not yet support Google's official MTP drafter architecture (<code>Gemma4AssistantForCausalLM</code>, <a href="https://github.com/ggml-org/llama.cpp/discussions/22735" style="color:var(--accent);">discussion #22735</a>). Lucebox runs both DFlash and MTP drafters today via a forked stack. Community coverage of Gemma 4 on consumer hardware is thin — we expect public numbers to improve as mainstream tools catch up. See also <a href="https://gemma4.wiki/benchmark" style="color:var(--accent);">gemma4.wiki</a> for an aggregated public scorecard.
+        </div>
       </div>
     </section>
 
@@ -1828,6 +1897,107 @@ ul.schema li::before {
       </div>
     </section>
 
+    <!-- ── Run it yourself ──────────────────────────────────────── -->
+    <section class="section" id="run-it-yourself">
+      <div class="wide-wrap">
+        <p class="section-eyebrow">Practical Recipes</p>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('run-it-yourself')">#</button>Run it yourself — top configurations for RTX 3090 (24 GB)</h2>
+        <p class="lede">Five copy-paste-ready server launches. Each starts the OpenAI-compatible endpoint on port 8080. Replace <code>/path/to/…</code> with your actual GGUF paths.</p>
+
+        <!-- Pre-flight box -->
+        <div class="card" style="margin-bottom:2rem;">
+          <p class="card-label">Pre-flight requirements</p>
+          <ul class="prose-list" style="margin-top:0.5rem;">
+            <li>RTX 3090 (24 GB) or equivalent VRAM; CUDA 12.x toolkit</li>
+            <li>Build the test binary: <code>cmake --build dflash/build -j 4 --target test_gemma4_dflash</code></li>
+            <li>For 24 GiB cards, build with <code>cmake -DGGML_CUDA_NO_VMM=ON ..</code> for cleaner long-context prefill (auto-set by <code>server.py</code> when it detects ≤24 GiB)</li>
+            <li>Pull GGUFs from Hugging Face: <code>gemma-4-26B-A4B-it</code>, <code>gemma-4-31B-it</code>, plus matching draft GGUFs. To quantize a draft from safetensors: <code>python3 dflash/scripts/quantize_draft_q8.py --arch gemma4 ...</code></li>
+          </ul>
+        </div>
+
+        <!-- Card 1 -->
+        <div class="card card-highlight" style="margin-bottom:1.5rem;">
+          <p class="card-label">Config 1 — MoE Speed King <span class="arch-tag arch-tag-moe">MoE 26B-A4B</span></p>
+          <p style="font-size:0.9rem;color:var(--text-sec);margin-bottom:0.75rem;line-height:1.55;"><strong>Use case:</strong> code completion, agent prompts under 4K tokens &nbsp;·&nbsp; <strong>Expected throughput:</strong> ~132 tok/s decode, AL ≈ 5.22</p>
+          <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;font-family:var(--font-mono);font-size:0.82rem;line-height:1.7;margin:0;"><code>python3 dflash/scripts/server.py \
+  --target /path/to/gemma-4-26B-A4B-it-UD-Q4_K_M.gguf \
+  --draft  /path/to/gemma4-26b-a4b-dflash/draft-q8_0.gguf \
+  --max-ctx 4096 \
+  --ctk q8_0 --ctv q8_0 \
+  --budget 64 \
+  --pflash \
+  --port 8080</code></pre>
+          <p style="font-size:0.78rem;color:var(--text-sec);margin-top:0.6rem;margin-bottom:0;"><code>--budget 64</code> maps to effective dm=16 via server's budget→dm mapping.</p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="card card-highlight" style="margin-bottom:1.5rem;">
+          <p class="card-label">Config 2 — MoE Long-Context Ship <span class="arch-tag arch-tag-moe">MoE 26B-A4B</span></p>
+          <p style="font-size:0.9rem;color:var(--text-sec);margin-bottom:0.75rem;line-height:1.55;"><strong>Use case:</strong> 256K-context coding agents, document analysis &nbsp;·&nbsp; <strong>Expected throughput:</strong> ~67.95 tok/s decode, 21.73 GB VRAM</p>
+          <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;font-family:var(--font-mono);font-size:0.82rem;line-height:1.7;margin:0;"><code>python3 dflash/scripts/server.py \
+  --target /path/to/gemma-4-26B-A4B-it-UD-Q4_K_M.gguf \
+  --draft  /path/to/gemma4-26b-a4b-dflash/draft-q8_0.gguf \
+  --max-ctx 262144 \
+  --ctk q8_0 --ctv q8_0 \
+  --budget 16 \
+  --pflash \
+  --lazy-draft \
+  --port 8080</code></pre>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card card-highlight" style="margin-bottom:1.5rem;">
+          <p class="card-label">Config 3 — MoE 1M Frontier <span class="arch-tag arch-tag-moe">MoE 26B-A4B</span></p>
+          <p style="font-size:0.9rem;color:var(--text-sec);margin-bottom:0.75rem;line-height:1.55;"><strong>Use case:</strong> massive document analysis, multi-file repository inspection &nbsp;·&nbsp; <strong>Expected throughput:</strong> 5.82 tok/s decode (1.7 GB VRAM headroom on 24 GB card)</p>
+          <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;font-family:var(--font-mono);font-size:0.82rem;line-height:1.7;margin:0;"><code>python3 dflash/scripts/server.py \
+  --target /path/to/gemma-4-26B-A4B-it-UD-Q4_K_M.gguf \
+  --max-ctx 1048576 \
+  --ctk tq3_0 --ctv tq3_0 \
+  --pflash \
+  --port 8080</code></pre>
+          <p style="font-size:0.78rem;color:var(--text-sec);margin-top:0.6rem;margin-bottom:0;">No drafter — speculation hurts at 1M with VRAM-saturated TQ3 KV. Pure target-only decode.</p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="card card-highlight" style="margin-bottom:1.5rem;">
+          <p class="card-label">Config 4 — Dense 31B Quality <span class="arch-tag arch-tag-dense">Dense 31B</span></p>
+          <p style="font-size:0.9rem;color:var(--text-sec);margin-bottom:0.75rem;line-height:1.55;"><strong>Use case:</strong> creative writing, OOD prompts where MoE drafter under-performs &nbsp;·&nbsp; <strong>Expected throughput:</strong> ~98 tok/s @ 4K HumanEval, AL = 5.12 creative</p>
+          <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;font-family:var(--font-mono);font-size:0.82rem;line-height:1.7;margin:0;"><code>python3 dflash/scripts/server.py \
+  --target /path/to/gemma-4-31B-it-Q4_K_M.gguf \
+  --draft  /path/to/gemma4-31b-dflash/draft-q8_0.gguf \
+  --max-ctx 4096 \
+  --ctk q8_0 --ctv q8_0 \
+  --budget 64 \
+  --pflash \
+  --port 8080</code></pre>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="card card-highlight" style="margin-bottom:1.5rem;">
+          <p class="card-label">Config 5 — Dense 31B Long-Context Min-VRAM <span class="arch-tag arch-tag-dense">Dense 31B</span></p>
+          <p style="font-size:0.9rem;color:var(--text-sec);margin-bottom:0.75rem;line-height:1.55;"><strong>Use case:</strong> 64K dense context on 24 GB card with TQ3 compression &nbsp;·&nbsp; <strong>Expected throughput:</strong> 2.54 tok/s decode (post-rebase fix; was 1.78 tok/s anomaly)</p>
+          <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;font-family:var(--font-mono);font-size:0.82rem;line-height:1.7;margin:0;"><code>python3 dflash/scripts/server.py \
+  --target /path/to/gemma-4-31B-it-Q4_K_M.gguf \
+  --max-ctx 65536 \
+  --ctk tq3_0 --ctv tq3_0 \
+  --pflash \
+  --port 8080</code></pre>
+        </div>
+
+        <!-- Common notes -->
+        <div class="card" style="margin-bottom:0;">
+          <p class="card-label">Common notes — OpenAI-compatible client</p>
+          <ul class="prose-list" style="margin-bottom:1rem;">
+            <li>Drop-in OpenAI client: <code>OPENAI_API_BASE=http://localhost:8080/v1</code> and <code>OPENAI_API_KEY=sk-any</code></li>
+            <li>Test endpoint:<pre style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.75rem 1rem;overflow-x:auto;font-family:var(--font-mono);font-size:0.8rem;line-height:1.6;margin:0.5rem 0 0;"><code>curl http://localhost:8080/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"luce-dflash","messages":[{"role":"user","content":"hi"}],"stream":true}'</code></pre></li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
     <!-- ── What Worked ───────────────────────────────────────── -->
     <section class="section" id="what-worked">
       <div class="wide-wrap">
@@ -2406,7 +2576,7 @@ ul.schema li::before {
       <div class="wide-wrap">
         <p class="section-eyebrow">Scientific Benchmark</p>
         <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('super-bench')">#</button>Super-Bench — scientific/results.csv</h2>
-        <p class="lede">Wall-clock-sourced, energy-instrumented benchmark sweep. Generated when the super-bench harness completes; live-reloaded from <code>scientific/results.csv</code>.</p>
+        <p class="lede">Wall-clock-sourced, energy-instrumented benchmark sweep. Generated when the super-bench harness completes; live-reloaded from <code>../scientific/results.csv</code>.</p>
         <div id="bench-status" class="bench-status"><!-- populated by JS --></div>
         <div id="bench-table-wrap"><!-- populated by JS --></div>
         <details>
@@ -2510,6 +2680,56 @@ ul.schema li::before {
       </div>
     </section>
 
+    <!-- ── Credits ──────────────────────────────────────────────── -->
+    <section class="section" id="credits">
+      <div class="wide-wrap">
+        <p class="section-eyebrow">Acknowledgements</p>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('credits')">#</button>Credits — built on the shoulders of others</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin:1.5rem 0;">
+
+          <div class="card" style="grid-column:1/-1;">
+            <p class="card-label">Models</p>
+            <ul class="prose-list" style="margin-top:0.25rem;">
+              <li><strong><a href="https://blog.google/technology/developers/gemma-4/" style="color:var(--accent);text-decoration:none;">Google DeepMind — Gemma 4</a></strong> — the underlying language models (Gemma-4-26B-A4B-it MoE and Gemma-4-31B-it Dense); released 2026-04-02.</li>
+              <li><strong><a href="https://blog.google/technology/developers/gemma-mtp/" style="color:var(--accent);text-decoration:none;">Google — Gemma 4 MTP drafters</a></strong> — official 0.5B speculative drafters; released 2026-05-06. We run them alongside the DFlash drafter via our forked stack.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <p class="card-label">Inference &amp; Frameworks</p>
+            <ul class="prose-list" style="margin-top:0.25rem;">
+              <li><strong><a href="https://github.com/ggml-org/llama.cpp" style="color:var(--accent);text-decoration:none;">ggml-org / llama.cpp</a></strong> — the foundation. ggml CUDA backend, GGUF format, FlashAttention kernels. Everything stands on this.</li>
+              <li><strong><a href="https://github.com/z-lab/dflash" style="color:var(--accent);text-decoration:none;">z-lab / dflash</a></strong> — the DFlash speculative-decoding block-diffusion drafter architecture that our drafters extend.</li>
+              <li><strong><a href="https://github.com/ggml-org/llama.cpp/pulls?q=turboquant" style="color:var(--accent);text-decoration:none;">ggml team — TQ3_0 / TurboQuant</a></strong> — 3.5-bit FWHT-rotated KV quantization. We extended TQ3_0 support for Gemma 4's SWA + full-attention hybrid layout.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <p class="card-label">Maintainers &amp; Community</p>
+            <ul class="prose-list" style="margin-top:0.25rem;">
+              <li><strong><a href="https://github.com/howard0su" style="color:var(--accent);text-decoration:none;">howard0su</a></strong> — Luce-Org/lucebox-hub maintainer; PR #131 reviewer; SWA truncation port (PR #129) we adapted to Gemma 4.</li>
+              <li><strong><a href="https://github.com/Luce-Org/lucebox-hub" style="color:var(--accent);text-decoration:none;">Luce-Org</a></strong> — upstream framework: daemon, server, prefix cache, scientific harness.</li>
+              <li>All llama.cpp contributors past and present — the 15 fixes we made would not have been possible without their infrastructure.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <p class="card-label">Reviewers &amp; Tools</p>
+            <ul class="prose-list" style="margin-top:0.25rem;">
+              <li><strong>cubic-dev-ai bot</strong> — automated P1/P2 review feedback that caught real defensive bugs across the PR stack.</li>
+            </ul>
+            <p class="card-label" style="margin-top:1rem;">Inspiration</p>
+            <ul class="prose-list" style="margin-top:0.25rem;">
+              <li><strong><a href="https://arxiv.org/abs/2302.01318" style="color:var(--accent);text-decoration:none;">Speculative decoding</a></strong> — Leviathan et al., 2023. The theoretical backbone of all drafter experiments.</li>
+              <li><strong><a href="https://github.com/Dao-AILab/flash-attention" style="color:var(--accent);text-decoration:none;">FlashAttention</a></strong> — Tri Dao et al. The IO-aware attention algorithm that makes pFlash viable at scale.</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
     <!-- ── Footer ───────────────────────────────────────────── -->
     <footer>
       <p>Generated 2026-05-10 &nbsp;&middot;&nbsp; Branch <code>feature/gemma4-support</code> &nbsp;&middot;&nbsp; Evidence files in <code>.sisyphus/notes/gemma4-baseline/</code></p>
@@ -2569,7 +2789,7 @@ async function loadBench() {
   var status = document.getElementById('bench-status');
   var wrap = document.getElementById('bench-table-wrap');
   try {
-    var res = await fetch('scientific/results.csv', { cache: 'no-store' });
+    var res = await fetch('../scientific/results.csv', { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var text = await res.text();
     var parsed = parseCSV(text);
