@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gemma4 — Engineering Evidence</title>
+<title>Gemma4 rocking on the 3090</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&display=swap" rel="stylesheet">
 <style>
@@ -197,6 +197,17 @@ main {
   color: var(--text-sec);
   margin-bottom: 2.25rem;
   line-height: 1.5;
+}
+
+.hero-colophon {
+  font-size: 0.8rem;
+  color: var(--text-sec);
+  opacity: 0.7;
+  margin-top: 1.5rem;
+  line-height: 1.5;
+  max-width: 52ch;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .metric-chips {
@@ -1012,16 +1023,17 @@ ul.schema li::before {
     <section class="hero" id="hero">
       <div class="hero-inner">
         <div class="branch-chip">feature/gemma4-support</div>
-        <h1>Gemma4 — Engineering Evidence</h1>
-        <p class="hero-sub">What worked, what didn't, what we discovered.<br>May 6–10, 2026.</p>
+        <h1>Gemma4 rocking on the 3090</h1>
+        <p class="hero-sub">1 M tokens fits. 256 K runs at 67.95 tok/s. Dense 31B at ~98 tok/s.<br>Includes: receipts, code, copy-paste configs.</p>
         <div class="metric-chips">
           <span class="chip"><strong>6.64 J/tok</strong> best efficiency</span>
           <span class="chip"><strong>132 tok/s</strong> MoE peak (4K)</span>
           <span class="chip"><strong>67.95 tok/s</strong> MoE 256K ship config</span>
           <span class="chip"><strong>1M ctx</strong> TQ3 on 24 GB</span>
           <span class="chip"><strong>15</strong> distinct fixes</span>
-          <span class="chip"><strong>70+</strong> commits</span>
+          <span class="chip"><strong>80</strong> commits, 4 days</span>
         </div>
+        <p class="hero-colophon">Built in 4 days (May 7–10, 2026; 80 commits across 4 unique days) by humans and AI in collaboration — direction over autonomy, simple tools over magic: ggml, git, a 24 GB GPU.</p>
       </div>
     </section>
 
@@ -2607,10 +2619,10 @@ ul.schema li::before {
     <section class="section" id="timeline">
       <div class="prose-wrap">
         <p class="section-eyebrow">Chronology</p>
-        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('timeline')">#</button>Timeline — May 6–10, 2026</h2>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('timeline')">#</button>Timeline — May 7–10, 2026</h2>
         <div class="timeline">
           <div class="tl-item">
-            <div class="tl-date">May 6–7</div>
+            <div class="tl-date">May 7</div>
             <div class="tl-content">
               <p class="tl-text">Plan: Gemma4 31B Dense + 26B-A4B MoE; design TQ3_0 KV cache architecture.</p>
             </div>
