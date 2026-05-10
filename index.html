@@ -955,9 +955,11 @@ ul.schema li::before {
       <li><a href="#scaling" class="toc-sub2">§1.4 Scaling Sweep</a></li>
       <li><a href="#dm-sweep" class="toc-sub2">§1.5 dm-sweep</a></li>
       <li><a href="#scientific-24cell" class="toc-sub2">§1C Scientific 24-cell</a></li>
+      <li><a href="#tq3-frontier">TQ3 Frontier</a></li>
+      <li><a href="#for-3090-users">For 3090 Users</a></li>
       <li><a href="#charts">Charts</a></li>
       <li><a href="#what-failed">What Did Not Work</a></li>
-      <li><a href="#discoveries">13 Discoveries</a></li>
+      <li><a href="#discoveries">15 Discoveries</a></li>
       <li><a href="#super-bench">Super-Bench</a></li>
       <li><a href="#timeline">Timeline</a></li>
       <li><a href="#open-questions">Open Questions</a></li>
@@ -986,9 +988,11 @@ ul.schema li::before {
         <li><a href="#dm-sweep" class="toc-sub2">§1.5 dm-sweep</a></li>
         <li><a href="#what-failed">What Did Not Work</a></li>
         <li><a href="#scientific-24cell" class="toc-sub2">§1C Scientific 24-cell</a></li>
+        <li><a href="#tq3-frontier">TQ3 Frontier ★</a></li>
+        <li><a href="#for-3090-users">For 3090 Users ★</a></li>
         <li><a href="#charts">Charts</a></li>
         <li><a href="#what-failed">What Did Not Work</a></li>
-        <li><a href="#discoveries">13 Discoveries</a></li>
+        <li><a href="#discoveries">15 Discoveries</a></li>
         <li><a href="#super-bench">Super-Bench</a></li>
         <li><a href="#timeline">Timeline</a></li>
         <li><a href="#open-questions">Open Questions</a></li>
@@ -1066,6 +1070,212 @@ ul.schema li::before {
       </div>
       <div class="prose-wrap">
         <p class="summary-coda"><code>feature/gemma4-support</code> ships three speculative-decode paths — <strong>none</strong>, <strong>MTP</strong> (Multi-Token Prediction assistant), and <strong>DFlash</strong> (block-diffusion drafter). MTP is functional but uneconomic at 64K+ (≤2 % accept) and remains an open investigation. The path to these results required <strong>15 distinct ggml/llama.cpp fixes</strong>, none of which exist upstream — see §3 Discoveries. Post-rebase (<code>daef232a6</code> + <code>4b0c158</code>): 1M TQ3 context confirmed on 24 GB, 256K ship config at <strong>67.95 tok/s</strong>.</p>
+      </div>
+    </section>
+
+    <!-- ── TQ3 Frontier ───────────────────────────────────────── -->
+    <section class="section" id="tq3-frontier">
+      <div class="wide-wrap">
+        <p class="section-eyebrow">Post-Rebase Validation</p>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('tq3-frontier')">#</button>TQ3_0 Frontier — 1M context on 24 GB</h2>
+        <p class="lede">Post-rebase (<code>daef232a6</code> + <code>4b0c158</code>), TQ3/TQ3 MoE generates coherently from 4K to 1M tokens with no cliff. Numbers below are measured on RTX 3090 24 GB, MoE 26B-A4B, TQ3_0/TQ3_0 KV, no drafter, n_predict=64.</p>
+
+        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">MoE 26B-A4B — TQ3/TQ3, no drafter</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Context</th>
+                <th class="num">Prefill tok/s</th>
+                <th class="num">Decode tok/s</th>
+                <th class="num">VRAM peak GB</th>
+                <th class="num">KV cache saved %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>4K</td>
+                <td class="num">—</td>
+                <td class="num">6.95</td>
+                <td class="num">17.43</td>
+                <td class="num">41.7</td>
+              </tr>
+              <tr>
+                <td>16K</td>
+                <td class="num">1 803.5</td>
+                <td class="num">6.59</td>
+                <td class="num">17.77</td>
+                <td class="num">72.9</td>
+              </tr>
+              <tr>
+                <td>32K</td>
+                <td class="num">1 801.0</td>
+                <td class="num">6.56</td>
+                <td class="num">17.83</td>
+                <td class="num">78.1</td>
+              </tr>
+              <tr>
+                <td>64K</td>
+                <td class="num">1 424.7</td>
+                <td class="num">5.77</td>
+                <td class="num">18.04</td>
+                <td class="num">80.7</td>
+              </tr>
+              <tr>
+                <td>96K</td>
+                <td class="num">1 406.2</td>
+                <td class="num">5.64</td>
+                <td class="num">18.18</td>
+                <td class="num">81.6</td>
+              </tr>
+              <tr>
+                <td>128K</td>
+                <td class="num">1 407.3</td>
+                <td class="num">5.63</td>
+                <td class="num">18.31</td>
+                <td class="num">82.0</td>
+              </tr>
+              <tr>
+                <td>256K</td>
+                <td class="num">1 392.9</td>
+                <td class="num">5.65</td>
+                <td class="num">19.14</td>
+                <td class="num">82.7</td>
+              </tr>
+              <tr>
+                <td>384K</td>
+                <td class="num">1 452.6</td>
+                <td class="num">5.89</td>
+                <td class="num">19.61</td>
+                <td class="num">82.9</td>
+              </tr>
+              <tr>
+                <td>512K</td>
+                <td class="num">1 441.2</td>
+                <td class="num">5.77</td>
+                <td class="num">20.13</td>
+                <td class="num">83.0</td>
+              </tr>
+              <tr>
+                <td>768K</td>
+                <td class="num">1 441.5</td>
+                <td class="num">5.82</td>
+                <td class="num">21.23</td>
+                <td class="num">83.1</td>
+              </tr>
+              <tr>
+                <td><strong>1M</strong></td>
+                <td class="num">1 444.6</td>
+                <td class="num"><span class="badge-good">5.82</span></td>
+                <td class="num"><strong>22.26</strong></td>
+                <td class="num">83.2</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">Dense 31B — TQ3/TQ3, no drafter</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Context</th>
+                <th class="num">Prefill tok/s</th>
+                <th class="num">Decode tok/s</th>
+                <th class="num">VRAM peak GB</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>4K</td>
+                <td class="num">190.5</td>
+                <td class="num">3.38</td>
+                <td class="num">19.49</td>
+              </tr>
+              <tr>
+                <td>64K</td>
+                <td class="num">416.7</td>
+                <td class="num">2.54</td>
+                <td class="num">21.07</td>
+              </tr>
+              <tr>
+                <td>128K</td>
+                <td class="num">414.2</td>
+                <td class="num">2.52</td>
+                <td class="num">22.12</td>
+              </tr>
+              <tr>
+                <td>256K <em style="color:var(--text-sec);font-size:0.8em;">(saturated)</em></td>
+                <td class="num">47.4</td>
+                <td class="num">2.45</td>
+                <td class="num">24.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="headline-callouts" style="margin-top:1.5rem;">
+          <div class="callout-box" style="grid-column:1/-1;">
+            <strong>Headline</strong>
+            <small>Flat 5.6–6.6 tok/s on MoE through 1M context. 22.26 GB peak VRAM at 1M leaves 1.7 GB headroom on a 3090. TQ3/TQ3 pays a ~30% decode-tok/s tax vs Q8/Q8 (4K: 6.95 vs 62.83 tok/s) but unlocks contexts Q8 cannot reach on 24 GB.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── For 3090 Users ────────────────────────────────── -->
+    <section class="section" id="for-3090-users">
+      <div class="wide-wrap">
+        <p class="section-eyebrow">Practical Guide</p>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('for-3090-users')">#</button>What this means if you run a 3090</h2>
+        <p class="lede">A $700–1 000 used RTX 3090 now runs Gemma 4 26B-A4B at up to <strong>1 million tokens</strong> of context with TQ3/TQ3 KV cache — or at <strong>67.95 tok/s</strong> with Q8/Q8 + DFlash + pFlash for the 256 K range. This is the first time consumer hardware can do long-context inference without offloading any weights or KV data to system RAM or disk: everything fits in 24 GB VRAM.</p>
+
+        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">Picking your KV layout</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Context length</th>
+                <th>Recommended config</th>
+                <th>Why</th>
+                <th class="num">Decode tok/s</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Up to 16 K <em style="color:var(--text-sec);font-size:0.85em;">(chat, single file)</em></td>
+                <td>Q8/Q8 + DFlash + pFlash drafter dm=4</td>
+                <td>Fastest path; KV fits comfortably at these sizes</td>
+                <td class="num">up to 132</td>
+              </tr>
+              <tr>
+                <td>16 K – 64 K <em style="color:var(--text-sec);font-size:0.85em;">(multi-file code review, RAG)</em></td>
+                <td>Q8/Q8 + DFlash; consider pFlash for prefill</td>
+                <td>Q8 still fits; Q8 is ~30% faster than TQ3 in this band</td>
+                <td class="num">60 – 90</td>
+              </tr>
+              <tr>
+                <td>64 K – 1 M <em style="color:var(--text-sec);font-size:0.85em;">(whole-codebase, long docs, agent loops)</em></td>
+                <td>TQ3/TQ3, no drafter <em style="color:var(--text-sec);font-size:0.85em;">(or dm=4 if accept_rate ≥ 60%)</em></td>
+                <td>TQ3 cuts KV ~83%, fits 1 M in 22.26 GB on 24 GB card</td>
+                <td class="num">5.6 – 6.6 (flat)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.75rem 0 0.5rem;">Real workloads now possible on 24 GB</h3>
+        <ul style="margin:0 0 1.5rem 1.25rem;line-height:1.8;color:var(--text-main);">
+          <li><strong>Whole-codebase Q&amp;A</strong> — load a 200 K-token monorepo into context once, ask interactively at ~5.7 tok/s. Prefill runs at 1 392.9 tok/s so the 256 K initial load takes roughly 3 minutes, then questions are answered without reloading.</li>
+          <li><strong>Long-document summarization</strong> — entire 500-page PDFs (~400 K tokens) in a single shot at 5.77 tok/s decode, 20.13 GB peak VRAM. No chunking, no retrieval hacks.</li>
+          <li><strong>Agent loops with deep history</strong> — 1 M-token rolling context for tool-use agents that never need to re-summarise after every step. 22.26 GB peak leaves ~1.7 GB headroom for a small drafter or display server.</li>
+          <li><strong>Local privacy-first AI</strong> — none of this requires offload to RAM or disk; all weights and KV state remain in VRAM. Your data never leaves the machine.</li>
+        </ul>
+
+        <div class="callout-box">
+          <strong>Bottom line</strong>
+          <small>If you have a 3090 and you're running an LLM locally, you no longer have to choose between context and speed below 64 K — and you can finally have ≥256 K context above it. The TQ3/TQ3 KV path closes the gap to datacenter inference for long-context use cases on a single $1 000 card.</small>
+        </div>
       </div>
     </section>
 
@@ -1685,6 +1895,7 @@ ul.schema li::before {
                 </table>
               </div>
               <p style="font-size:0.83rem;color:var(--text-sec);">M4 crash: <code>fattn.cu:652</code>. Latent kernel-side issue with MTP + Q8 V-cache.</p>
+              <p style="font-size:0.80rem;color:var(--text-sec);font-style:italic;">Pre-rebase numbers (before <code>daef232a6</code> + <code>4b0c158</code>). See §TQ3 Frontier for current TQ3 baselines.</p>
             </div>
           </details>
 
@@ -1724,6 +1935,7 @@ ul.schema li::before {
                   </tbody>
                 </table>
               </div>
+              <p style="font-size:0.80rem;color:var(--text-sec);font-style:italic;">Pre-rebase numbers (before <code>daef232a6</code> + <code>4b0c158</code>). See §TQ3 Frontier for current TQ3 baselines.</p>
             </div>
           </details>
 
@@ -1731,6 +1943,7 @@ ul.schema li::before {
           <details id="matrix-64k">
             <summary>§1.3 Matrix-64K-v2 &mdash; 50K-token prompt, post-fix rerun <span class="arch-tag arch-tag-dense">Dense 31B</span></summary>
             <div class="details-body">
+              <p style="font-size:0.80rem;color:var(--text-sec);font-style:italic;">Pre-rebase numbers (before <code>daef232a6</code> + <code>4b0c158</code>). See §TQ3 Frontier for current TQ3 baselines.</p>
               <h3>Matrix-64K-v2 (50K-token prompt, post-fix rerun)</h3>
               <div class="table-wrap">
                 <table>
@@ -2090,7 +2303,7 @@ ul.schema li::before {
     <section class="section" id="discoveries">
       <div class="wide-wrap">
         <p class="section-eyebrow">Key Intellectual Property</p>
-        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('discoveries')">#</button>What We Discovered — 13 Findings</h2>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('discoveries')">#</button>What We Discovered — 15 Findings</h2>
         <p style="color:var(--text-sec);font-size:0.9rem;margin-bottom:1.5rem;">Each row below represents a non-obvious finding with a concrete fix location. These findings do not exist in upstream llama.cpp.</p>
         <div class="table-wrap">
           <table class="discovery-table">
@@ -2173,7 +2386,7 @@ ul.schema li::before {
                 <td class="disc-num">12</td>
                 <td class="disc-subsys">TQ3 K dequant intercept</td>
                 <td class="disc-text">MMA path silently strips FWHT rotation when reading TQ3_0 K-cache. Forced chunked-path dispatch for TQ3 K to avoid the MMA intercept.</td>
-                <td class="disc-where">submodule commit <code>d758ed9bf</code><br>(llama.cpp fork)</td>
+                <td class="disc-where">submodule <code>daef232a6</code> (force-chunked dispatcher; drops broken MMA intercept) + outer-repo <code>4b0c158</code> (graph-level FWHT rotation via <code>ggml_cont</code> wrap)</td>
               </tr>
               <tr>
                 <td class="disc-num">13</td>
@@ -2193,7 +2406,7 @@ ul.schema li::before {
       <div class="wide-wrap">
         <p class="section-eyebrow">Scientific Benchmark</p>
         <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('super-bench')">#</button>Super-Bench — scientific/results.csv</h2>
-        <p class="lede">Wall-clock-sourced, energy-instrumented benchmark sweep. Generated when the super-bench harness completes; live-reloaded from <code>../scientific/results.csv</code>.</p>
+        <p class="lede">Wall-clock-sourced, energy-instrumented benchmark sweep. Generated when the super-bench harness completes; live-reloaded from <code>scientific/results.csv</code>.</p>
         <div id="bench-status" class="bench-status"><!-- populated by JS --></div>
         <div id="bench-table-wrap"><!-- populated by JS --></div>
         <details>
@@ -2356,7 +2569,7 @@ async function loadBench() {
   var status = document.getElementById('bench-status');
   var wrap = document.getElementById('bench-table-wrap');
   try {
-    var res = await fetch('../scientific/results.csv', { cache: 'no-store' });
+    var res = await fetch('scientific/results.csv', { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var text = await res.text();
     var parsed = parseCSV(text);

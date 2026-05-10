@@ -46,7 +46,7 @@ The 1M TQ3 frontier and the resolved dense 64K cliff are both unlocked by today'
 
 ### Framework context
 
-`feature/gemma4-support` ships three speculative-decode paths — **none**, **MTP** (Multi-Token Prediction assistant), and **DFlash** (block-diffusion drafter). MTP is functional but uneconomic at 64K+ (≤2 % accept) and remains an open investigation. **The path to these results required 13 distinct ggml/llama.cpp fixes, none of which exist upstream** (see §3 Discoveries).
+`feature/gemma4-support` ships three speculative-decode paths — **none**, **MTP** (Multi-Token Prediction assistant), and **DFlash** (block-diffusion drafter). MTP is functional but uneconomic at 64K+ (≤2 % accept) and remains an open investigation. **The path to these results required 15 distinct ggml/llama.cpp fixes, none of which exist upstream** (see §3 Discoveries).
 
 ## 1. WHAT WORKED — Quantitative Evidence
 
@@ -222,7 +222,7 @@ Logs: `.sisyphus/notes/gemma4-baseline/tq3-frontier/F_*.log` (no-drafter frontie
 
 ## 3. WHAT WE DISCOVERED (non-public engineering knowledge)
 
-13 fixes/discoveries not documented in upstream llama.cpp / ggml.
+15 fixes/discoveries not documented in upstream llama.cpp / ggml.
 
 | # | Subsystem | Discovery | Where it lives |
 |---|---|---|---|
@@ -237,7 +237,7 @@ Logs: `.sisyphus/notes/gemma4-baseline/tq3-frontier/F_*.log` (no-drafter frontie
 | 9 | n_tokens=1 decode + SWA | Single-token decode also needs allocated+filled SWA mask sized to `ring_size`, not `kv_seq_len`. | 7b62c07 |
 | 10 | Shared FA mask across layers | Single mask buffer reused across all need-mask layers (256-align or head_dim≥512). | `internal.h:847-852`, `gemma4_mtp_graph.cpp:484-490` |
 | 11 | DFlash decode correctness | BOS/EOS handling + per-layer SWA mask on draft (4 SWA + 1 full). Prefix-direct KV semantics. | 1386690, 9588c97 |
-| 12 | TQ3 K dequant intercept strips FWHT rotation | MMA path strips FWHT rotation when dequanting TQ3_0 K → F16 before dispatch. Forced chunked-path for all TQ3 K. | submodule commit d758ed9bf (llama.cpp fork) |
+| 12 | TQ3 K dequant intercept strips FWHT rotation | MMA path strips FWHT rotation when dequanting TQ3_0 K → F16 before dispatch. Fix dropped the broken MMA dequant intercept; submodule now force-chunks all TQ3_0 cases (unless `DFLASH_TQ3_MMA` is opted in). | submodule `daef232a6` (force-chunked dispatcher, post-rebase) + outer-repo `4b0c158` (graph-level FWHT rotation via `ggml_cont` wrap) |
 | 13 | Dense DFlash drafter generalises OOD; MoE drafter does not | Dense drafter AL is stable across prompt distributions (4.20 code / 5.12 creative). MoE drafter AL collapses from 5.22 (code) to 2.49 (creative) — it is code-distribution-trained. No public ablation on drafter-distribution generalisation exists. | `scientific/results.csv`, `gemma4-journey.md §11` |
 | 14 | TQ3 long-context unlocked | Post-`daef232a6` chunked-dispatcher fix, MoE TQ3 sustains 5.6–6.6 tok/s flat from 4K to 1M with sub-linear VRAM growth (~0.34 GiB / 64K ctx). Practical 1M context on 24 GB GPUs confirmed. | `.sisyphus/notes/gemma4-baseline/tq3-frontier/`, submodule `daef232a6` |
 | 15 | Speculation anti-economical at VRAM-saturated regime | At MoE 1M + TQ3 KV with VRAM > 96% used, dflash drafter REDUCES throughput (1.70 vs 5.82 tok/s). Verify-pass scans full 1M KV (~1340 ms/step). Speculation is only economical when ctx fits with headroom; at 256K Q8/Q8 the same drafter delivers 67.95 tok/s (11.7× over no-drafter). | `.sisyphus/notes/gemma4-baseline/tq3-frontier/C1_dflash_1M_tq3_dm4.log`, `C3_dflash_pflash_256K_q8_dm4.log` |
@@ -280,13 +280,13 @@ The SWA mask was guarded by `if (n_tokens > 1)`. For single-token decode, the co
 
 Fix: drop `n_tokens > 1` guard; always allocate and fill `swa_mask` at all four decode call sites.
 
-### 5.3 Bug 2 — TQ3_0 K dequant MMA intercept strips FWHT rotation (submodule commit d758ed9bf)
+### 5.3 Bug 2 — TQ3_0 K dequant MMA intercept strips FWHT rotation (submodule `daef232a6` + outer-repo `4b0c158`)
 
 `fattn.cu:134–204` contained an intercept that dequantized TQ3_0 K storage to F16 and re-dispatched into the standard MMA path. TQ3_0 K is stored in **FWHT-rotated form** (applied at quantization write time). The chunked/vec FA kernels forward-rotate Q before computing Q@K when they see `K->type == GGML_TYPE_TQ3_0`. The MMA intercept skipped this because by dispatch time `K->type == GGML_TYPE_F16` — so Q was in standard space, K was in FWHT-rotated space, and Q@K was computed in mismatched domains.
 
 For SWA decode (`Q->ne[1]==1, Q->ne[0]==256`), the existing guard `(Q->ne[1] > 1 || Q->ne[0] > 256)` did not fire, so the broken MMA intercept was always taken for SWA single-token decode.
 
-Fix: drop the guard, force chunked for ALL TQ3_0 cases unless `DFLASH_TQ3_MMA` is opted in. After this fix, MTP+TQ3/TQ3 went from accept_rate 0.05 (degenerate loop) to **0.56 with coherent prose**.
+Fix: drop the guard, force chunked for ALL TQ3_0 cases unless `DFLASH_TQ3_MMA` is opted in. After this fix, MTP+TQ3/TQ3 went from accept_rate 0.05 (degenerate loop) to **0.56 with coherent prose**. (Final fix landed as submodule `daef232a6` post-rebase; outer-repo wraps Q/O with `ggml_cont` in `4b0c158`.)
 
 Why V was not broken by the symmetric bug: V's FWHT rotation affects only post-attention output values, not the attention score distribution (tokens are sampled from `softmax(QK)` not from V), so V being in FWHT space propagates a basis change that doesn't matter for argmax sampling.
 
