@@ -956,7 +956,6 @@ ul.schema li::before {
       <li><a href="#hero">Overview</a></li>
       <li><a href="#summary">Summary</a></li>
       <li><a href="#comparisons">Comparisons</a></li>
-      <li><a href="#best-config">Best Config</a></li>
       <li><a href="#run-it-yourself">Run it Yourself</a></li>
       <li><a href="#what-worked">What Worked</a></li>
       <li><a href="#dense-31b" class="toc-sub">Dense 31B</a></li>
@@ -991,7 +990,6 @@ ul.schema li::before {
         <li><a href="#hero">Overview</a></li>
         <li><a href="#summary">Summary</a></li>
         <li><a href="#comparisons">Comparisons ★</a></li>
-        <li><a href="#best-config">Best Config</a></li>
         <li><a href="#run-it-yourself">Run it Yourself ★</a></li>
         <li><a href="#what-worked">What Worked</a></li>
         <li><a href="#dense-31b" class="toc-sub">Dense 31B</a></li>
@@ -1024,7 +1022,7 @@ ul.schema li::before {
       <div class="hero-inner">
         <div class="branch-chip">feature/gemma4-support</div>
         <h1>Gemma4 rocking on the 3090</h1>
-        <p class="hero-sub">1 M tokens fits. 256 K runs at 67.95 tok/s. Dense 31B at ~98 tok/s.<br>Includes: receipts, code, copy-paste configs.</p>
+        <p class="hero-sub">1 M tokens fits. 256 K runs at 67.95 tok/s.<br>Includes: receipts, code, copy-paste configs.</p>
         <div class="metric-chips">
           <span class="chip"><strong>6.64 J/tok</strong> best efficiency</span>
           <span class="chip"><strong>132 tok/s</strong> MoE peak (4K)</span>
@@ -1128,7 +1126,7 @@ ul.schema li::before {
               </tr>
               <tr>
                 <td>Dense 31B peak decode @ 4K</td>
-                <td class="num"><span class="badge-good">~98 tok/s</span></td>
+                <td class="num"><span class="badge-good">81.7 tok/s</span><br><span style="font-size:0.82em;color:var(--text-sec);">creative dm=16, AL=5.12 (24-cell sweep)<br>up to ~98 tok/s observed on HumanEval (single-prompt; less rigorous)</span></td>
                 <td>40–50 <em style="color:var(--text-sec);font-size:0.88em;">(FA hangs in mainstream)</em></td>
                 <td><a href="https://github.com/ollama/ollama/issues/15350" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--border);">Ollama #15350</a> FA hang; <a href="https://craftrigs.com/gemma4-3090-benchmark" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--border);">craftrigs.com</a> reports 44 tok/s</td>
               </tr>
@@ -1888,27 +1886,6 @@ ul.schema li::before {
       </div>
     </section>
 
-    <!-- ── Best Config ───────────────────────────────────────── -->
-    <section class="section" id="best-config">
-      <div class="prose-wrap">
-        <p class="section-eyebrow">Production Ship</p>
-        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('best-config')">#</button>Best Known Configuration</h2>
-        <div class="card card-highlight">
-          <p class="card-label">Recommended Config</p>
-          <p class="card-config">
-            MoE 26B-A4B &nbsp;+&nbsp; <span class="val">DFlash drafter</span> &nbsp;+&nbsp;
-            K=<span class="val">Q8_0</span> / V=<span class="val">Q8_0</span> &nbsp;+&nbsp;
-            draft_max=<span class="val">4</span> &nbsp;+&nbsp; pFlash<br>
-            <br>
-            Decode: &nbsp;<span class="metric">35–37 tok/s</span><br>
-            VRAM: &nbsp;<span class="val">~22 GB</span><br>
-            Context: &nbsp;<span class="val">64K – 256K tokens</span><br>
-            avg_accept: &nbsp;<span class="metric">1.45 – 1.79</span>
-          </p>
-        </div>
-      </div>
-    </section>
-
     <!-- ── Run it yourself ──────────────────────────────────────── -->
     <section class="section" id="run-it-yourself">
       <div class="wide-wrap">
@@ -1973,7 +1950,7 @@ ul.schema li::before {
         <!-- Card 4 -->
         <div class="card card-highlight" style="margin-bottom:1.5rem;">
           <p class="card-label">Config 4 — Dense 31B Quality <span class="arch-tag arch-tag-dense">Dense 31B</span></p>
-          <p style="font-size:0.9rem;color:var(--text-sec);margin-bottom:0.75rem;line-height:1.55;"><strong>Use case:</strong> creative writing, OOD prompts where MoE drafter under-performs &nbsp;·&nbsp; <strong>Expected throughput:</strong> ~98 tok/s @ 4K HumanEval, AL = 5.12 creative</p>
+          <p style="font-size:0.9rem;color:var(--text-sec);margin-bottom:0.75rem;line-height:1.55;"><strong>Use case:</strong> creative writing, OOD prompts where MoE drafter under-performs &nbsp;·&nbsp; <strong>Expected throughput:</strong> <strong>81.7 tok/s @ 4K</strong>, AL=5.12 (creative dm=16, from the 24-cell scientific sweep). HumanEval-class prompts have shown peaks up to ~98 tok/s in single-prompt checks; we list the rigorously-measured number as the headline.</p>
           <pre style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;font-family:var(--font-mono);font-size:0.82rem;line-height:1.7;margin:0;"><code>python3 dflash/scripts/server.py \
   --target /path/to/gemma-4-31B-it-Q4_K_M.gguf \
   --draft  /path/to/gemma4-31b-dflash/draft-q8_0.gguf \
