@@ -34,6 +34,16 @@ The decode-J/token landscape (lower = better) — measured by trapezoidal integr
 - Long-context: viable at ≥128K (~24 tok/s, AL 7.11) but **anomalously collapses at 64K** (1.78 tok/s, AL 1.94) — VRAM-allocator paging at 24/24 GB cap with 50K prompt filling ~78 % of cache
 - dm=32 wastes vs dm=16 (identical numbers across all 4 dm=16/dm=32 cells)
 
+### Real ceiling on 24 GB GPUs (post-rebase, 2026-05-10)
+
+| Config | Decode tok/s | VRAM | Notes |
+|---|---|---|---|
+| **MoE 26B + dflash + Q8/Q8 + pflash + dm=4 @ 256K** | **67.95** | **21.73 GB** | **Practical ship config** (2× prior estimate) |
+| MoE 26B + TQ3/TQ3 + no drafter @ 1M | 5.82 | 22.26 GB | **1M context fits** with 1.7 GB headroom |
+| Dense 31B + TQ3/TQ3 + no drafter @ 64K | 2.54 | 21.07 GB | 64K cliff resolved (+43% vs prior) |
+
+The 1M TQ3 frontier and the resolved dense 64K cliff are both unlocked by today's TQ3 chunked-path correctness fix (submodule `daef232a6` + outer-repo `4b0c158`).
+
 ### Framework context
 
 `feature/gemma4-support` ships three speculative-decode paths — **none**, **MTP** (Multi-Token Prediction assistant), and **DFlash** (block-diffusion drafter). MTP is functional but uneconomic at 64K+ (≤2 % accept) and remains an open investigation. **The path to these results required 13 distinct ggml/llama.cpp fixes, none of which exist upstream** (see §3 Discoveries).
@@ -110,6 +120,22 @@ At 64K, decode is 1.78 tok/s with AL=1.94 and VRAM fully saturated at 24.00 GB. 
 
 *pFlash is active in all three runs* (`[chunked+pflash, chunk_size=1024]` in logs). The prefill gap vs MoE (~15×) is the dense:MoE compute ratio (31B/60L vs 4B/30L), not a pflash failure. pflash skips attention but cannot skip FFN compute.
 
+**Post-rebase update (2026-05-10) — §1.6 findings superseded.** After rebasing to ggml/master `0b047287f` with TQ3 chunked-path correctness fix (`daef232a6`), both anomalies described above are resolved:
+
+| Ctx | Prefill (s) | Decode (tok/s) | VRAM (GiB) | First gen | rc | Notes |
+|-----|-------------|----------------|------------|------------|----|-------|
+| 4K (humaneval) | 0.74 | 3.38 | 19.49 | `6596` | 0 | smoke |
+| 64K | 120.0 | **2.54** | 21.07 | `45518` | 0 | **+43% vs prior 1.78 tok/s anomaly** |
+| 128K | 120.7 | 2.52 | 22.12 | `45518` | 0 | clean — no token-715 repetition |
+| 256K | 1054.8 | 2.45 | 24.00 | `45518` | 0 | prefill collapse expected; decode OK |
+
+- **64K cliff resolved**: 1.78 tok/s (full VRAM saturation, AL=1.94) → 2.54 tok/s at 21.07 GiB with real diverse decode. +43% throughput, no saturation.
+- **128K/256K token-715 repetition collapse gone**: the prior "24 tok/s" result was degenerate repetition that the drafter predicted trivially (AL=7.11). Post-fix dense 128K produces real text (first gen `45518`) at 2.52 tok/s.
+
+**Root cause**: both anomalies (SWA garbage at 4K and the 64K/128K+dense pathology) share the same TQ3-chunked correctness bug. The pre-rebase `fattn.cu` intercept dequantised TQ3_0 K to F16 and re-dispatched via MMA, stripping the FWHT rotation applied at quantisation time. The fix (`daef232a6`) forces the chunked path for all TQ3_0 unless `DFLASH_TQ3_MMA` is explicitly opted in. The outer-repo FWHT contract commit `4b0c158` completed the fix.
+
+Logs: `.sisyphus/notes/gemma4-baseline/dense-tq3-frontier/D_*.log`, `D_smoke_tq3_4k.log`.
+
 ### 1.7 Scientific 24-cell sweep (energy-instrumented)
 
 Source: `scientific/results.csv`, `scientific/SUMMARY.md`. Config: Q8/Q8 KV, 4K ctx, n_predict=256, temp=0 seed=0 --ignore-eos, pflash on, RTX 3090 24 GB. Cells: Dense-31B × MoE-26B-A4B × code (humaneval_2) × creative (long_open) × dm ∈ {1, 2, 4, 8, 16, 32}.
@@ -135,6 +161,36 @@ Source: `scientific/results.csv`, `scientific/SUMMARY.md`. Config: Q8/Q8 KV, 4K 
 4. **OOD generalisation gap**: Dense drafter has uniform AL across distributions (4.20 code / 5.12 creative). MoE drafter collapses on creative (5.22 → 2.49), because it was trained on code-distribution data. Dense drafter generalises OOD; MoE drafter does not.
 
 VRAM: dense 22.07–22.11 GB, MoE 18.87–18.92 GB across all dm values. Power: dense+code peaks ~395W (~99% TDP); MoE averages ~130W.
+
+### 1.8 TQ3 long-context frontier — MoE 26B-A4B (post-rebase, 2026-05-10)
+
+Submodule rebased to ggml/master `0b047287f`, with 11 cherry-picks including the corrected TQ3 chunked-path dispatcher (`daef232a6`). The outer-repo FWHT contract fix (`4b0c158`) completed end-to-end correctness.
+
+| Ctx | Decode (tok/s) | VRAM peak (GiB) | First gen tok | Coherent |
+|-----|----------------|-----------------|---------------|----------|
+| 4K (humaneval) Q8 | 62.83 | 17.48 | `1106 6596 108 ...` | yes |
+| 4K (humaneval) TQ3 | 6.95 | 17.43 | `6596 108 2063 ...` | yes — matches Q8 |
+| 16K | 6.59 | 17.77 | `569` | yes |
+| 32K | 6.56 | 17.83 | `569` | yes |
+| 64K (long_code_50k) | 5.77 | 18.04 | `2165` | yes |
+| 96K | 5.64 | 18.18 | `2165` | yes |
+| 128K | 5.63 | 18.31 | `2165` | yes |
+| 256K | 5.65 | 19.14 | `2165` | yes |
+| 384K | 5.89 | 19.61 | `2165` | yes |
+| 512K | 5.77 | 20.13 | `2165` | yes |
+| 768K | 5.82 | 21.23 | `2165` | yes |
+| **1024K (1M)** | **5.82** | **22.26** | `2165` | yes — **1.74 GiB headroom** |
+| 1M humaneval (sanity) | 6.83 | 21.90 | `6796` | yes |
+
+**No cliff exists for MoE 26B-A4B + TQ3 between 4K and 1M.** Decode is flat 5.6–6.6 tok/s across the entire range. VRAM grows sub-linearly at approximately 0.34 GiB per 64K additional context.
+
+Speculation at 128K with dflash drafter: **12.48 tok/s, 59% accept rate, 2.22× over no-drafter baseline.**
+
+At 1M + TQ3 with dflash drafter (dm=4): decode falls to **1.70 tok/s** — slower than no-drafter at 5.82 tok/s. VRAM saturates at 24.00 GiB; verify-pass must scan the full 1M KV per step (~1340 ms), dwarfing any drafter savings. Speculation is anti-economical when VRAM is saturated (see §3 Discovery #15, §5.8).
+
+**Practical ship config on 24 GB GPUs**: MoE 26B-A4B + dflash + Q8/Q8 + pflash + dm=4 at 256K context → **67.95 tok/s**, 21.73 GiB. This is approximately 2× the previously-published 35–37 tok/s figure (§5.7), driven by ggml/master rebase improving prefill from ~1450 tok/s (chunked, no pflash) to ~5355 tok/s (chunked + pflash).
+
+Logs: `.sisyphus/notes/gemma4-baseline/tq3-frontier/F_*.log` (no-drafter frontier), `C1_dflash_1M_tq3_dm4.log` (speculation at 1M), `C3_dflash_pflash_256K_q8_dm4.log` (ship config), `X_1048576_humaneval_tq3.log` (sanity), `00_smoke_q8_4k.log` and `01_smoke_tq3_4k.log` (correctness controls).
 
 ## 2. WHAT DID NOT WORK
 
@@ -183,6 +239,8 @@ VRAM: dense 22.07–22.11 GB, MoE 18.87–18.92 GB across all dm values. Power: 
 | 11 | DFlash decode correctness | BOS/EOS handling + per-layer SWA mask on draft (4 SWA + 1 full). Prefix-direct KV semantics. | 1386690, 9588c97 |
 | 12 | TQ3 K dequant intercept strips FWHT rotation | MMA path strips FWHT rotation when dequanting TQ3_0 K → F16 before dispatch. Forced chunked-path for all TQ3 K. | submodule commit d758ed9bf (llama.cpp fork) |
 | 13 | Dense DFlash drafter generalises OOD; MoE drafter does not | Dense drafter AL is stable across prompt distributions (4.20 code / 5.12 creative). MoE drafter AL collapses from 5.22 (code) to 2.49 (creative) — it is code-distribution-trained. No public ablation on drafter-distribution generalisation exists. | `scientific/results.csv`, `gemma4-journey.md §11` |
+| 14 | TQ3 long-context unlocked | Post-`daef232a6` chunked-dispatcher fix, MoE TQ3 sustains 5.6–6.6 tok/s flat from 4K to 1M with sub-linear VRAM growth (~0.34 GiB / 64K ctx). Practical 1M context on 24 GB GPUs confirmed. | `.sisyphus/notes/gemma4-baseline/tq3-frontier/`, submodule `daef232a6` |
+| 15 | Speculation anti-economical at VRAM-saturated regime | At MoE 1M + TQ3 KV with VRAM > 96% used, dflash drafter REDUCES throughput (1.70 vs 5.82 tok/s). Verify-pass scans full 1M KV (~1340 ms/step). Speculation is only economical when ctx fits with headroom; at 256K Q8/Q8 the same drafter delivers 67.95 tok/s (11.7× over no-drafter). | `.sisyphus/notes/gemma4-baseline/tq3-frontier/C1_dflash_1M_tq3_dm4.log`, `C3_dflash_pflash_256K_q8_dm4.log` |
 
 Why none of this is upstream: TQ3_0 is bleeding-edge (Google TurboQuant ~2024); MTP assistants and DFlash drafters are proprietary architectures; pFlash block-sparse paths are research-grade. Upstream llama.cpp ships none of these.
 
@@ -254,13 +312,37 @@ PR #131's published "10.67/16" (0.667 accept rate) was on code prompts. There wa
 
 PR #131 reported 13 tok/s decode at 64K MoE. Our dm-sweep (dm ∈ {1, 2, 4, 8}) on the same model/context showed the root cause was the framework default `budget=22` (roughly dm=16+), not drafter quality. At dm=4, the same model and context gives **36.57 tok/s** — 2.8× higher than the published number. PR #131's result was over-speculation (budget too large → many rejected drafts → wasted compute), not drafter divergence.
 
-### 5.7 Production ship config (from journey blog)
+### 5.7 Production ship config (from journey blog; updated post-rebase 2026-05-10)
 
-| Use case | Config | Decode tok/s | VRAM |
+Pre-rebase numbers (historical record, superseded by post-rebase column):
+
+| Use case | Config | Decode tok/s (pre-rebase) | VRAM |
 |---|---|---|---|
-| **Long context (≥64k), code/agent** | **MoE 26B + dflash + Q8/Q8 + dm=4 + pflash** | **35–37 from 64k to 256k** | **19.7–21.7 GB** |
+| Long context (>=64k), code/agent | MoE 26B + dflash + Q8/Q8 + dm=4 + pflash | 35-37 from 64k to 256k | 19.7-21.7 GB |
 | Short context (4k), code/agent | MoE 26B + dflash + Q8/Q8 + dm=4 + pflash | ~112 | 19 GB |
 | Short context, highest quality MTP | 31B dense + MTP + Q8/Q8 (post-Bug-3 fix) | 34 | 20 GB |
 | Short context, dflash dense reference | 31B dense + dflash + Q8/Q8 + dm=8 + pflash | ~98 (HumanEval) | 22 GB |
 | 64k dense, Q8/Q8 sanity | 31B + Q8/Q8 + pflash, no drafter | 7.96 | 22.6 GB |
-| 64k dense, TQ3 minimum-VRAM | 31B + TQ3/TQ3 + pflash, no drafter | 6.90 | 21.25 GB |
+
+Post-rebase corrected numbers (submodule `daef232a6` + outer-repo `4b0c158`):
+
+| Use case | Config | Decode tok/s | VRAM |
+|---|---|---|---|
+| Long context (1M, code/agent) | MoE 26B + TQ3/TQ3 + no drafter + pflash | 5.82 | 22.26 GB |
+| **Long context (256K, code/agent)** | **MoE 26B + dflash + Q8/Q8 + pflash + dm=4** | **67.95** | **21.73 GB** <- practical ship |
+| Short context (4K), code/agent | MoE 26B + dflash + Q8/Q8 + dm=4 + pflash | ~112 | 19 GB |
+| Short context, highest quality MTP | 31B dense + MTP + Q8/Q8 (post-Bug-3 fix) | 34 | 20 GB |
+| Short context, dflash dense reference | 31B dense + dflash + Q8/Q8 + dm=8 + pflash | ~98 (HumanEval) | 22 GB |
+| 64k dense, TQ3 minimum-VRAM | 31B + TQ3/TQ3 + no drafter | 2.54 | 21.07 GB |
+
+### 5.8 Post-rebase TQ3 frontier — Bug 2 fix unlocks 1M context (2026-05-10)
+
+The fork was rebased to ggml/master HEAD `0b047287f`, with 11 cherry-picks applied cleanly. The critical commit is `daef232a6`, which corrects the TQ3_0 chunked-path dispatcher: it forces the chunked/vec kernel for ALL TQ3_0 K unless `DFLASH_TQ3_MMA` is explicitly opted in, eliminating the intercept that dequantised TQ3_0 K to F16 (stripping its FWHT rotation) before the MMA dispatch. The outer-repo FWHT contract commit `4b0c158` completed end-to-end correctness. Validation sequence:
+
+- 4K Q8 control: 62.83 tok/s, first gen `1106 6596 108` — unchanged from pre-rebase.
+- 4K TQ3 matches Q8 first three tokens (`6596 108 2063`) — correctness confirmed.
+- 16K → 1M TQ3 no-drafter sweep: flat 5.6–6.6 tok/s throughout, no cliff, VRAM growth sub-linear.
+- Dense 64K: 2.54 tok/s, 21.07 GiB — cliff resolved (+43% vs prior 1.78 tok/s anomaly).
+- Dense 128K/256K: 2.52/2.45 tok/s with real diverse output (first gen `45518`) — token-715 repetition collapse gone.
+
+The dense 64K cliff anomaly and the earlier TQ3 SWA garbage at 4K (Bug 2, §5.3) were the same root cause — two manifestations of FWHT-domain mismatch in the TQ3_0 K dequant intercept. The `daef232a6` submodule commit is the unification fix for both.

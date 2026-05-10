@@ -1007,9 +1007,10 @@ ul.schema li::before {
         <p class="hero-sub">What worked, what didn't, what we discovered.<br>May 6–10, 2026.</p>
         <div class="metric-chips">
           <span class="chip"><strong>6.64 J/tok</strong> best efficiency</span>
-          <span class="chip"><strong>132 tok/s</strong> MoE peak</span>
-          <span class="chip"><strong>82 tok/s</strong> Dense peak</span>
-          <span class="chip"><strong>13</strong> distinct fixes</span>
+          <span class="chip"><strong>132 tok/s</strong> MoE peak (4K)</span>
+          <span class="chip"><strong>67.95 tok/s</strong> MoE 256K ship config</span>
+          <span class="chip"><strong>1M ctx</strong> TQ3 on 24 GB</span>
+          <span class="chip"><strong>15</strong> distinct fixes</span>
           <span class="chip"><strong>70+</strong> commits</span>
         </div>
       </div>
@@ -1041,11 +1042,12 @@ ul.schema li::before {
             <h3>Speed king on code</h3>
           </header>
           <p class="card-hero"><strong>132.1</strong> tok/s<span class="card-sub">— code, dm=16</span></p>
-          <p class="card-detail">AL 5.22 · 11.82 J/tok · 18.9 GB · ~130 W average. Long-context (50K-token prompts, MoE+DFlash+Q8/Q8): sustained <strong>29–37 tok/s</strong> from 16K → 262K.</p>
+          <p class="card-detail">AL 5.22 · 11.82 J/tok · 18.9 GB · ~130 W average. Long-context (post-rebase): <strong>67.95 tok/s at 256K</strong> (Q8/Q8 + pflash + dm=4); <strong>1M context fits</strong> with TQ3/TQ3 at 5.82 tok/s, 22.26 GB (1.7 GB headroom).</p>
           <ul class="card-list">
             <li>Code AL plateau: <strong>5.22</strong></li>
             <li>Creative AL plateau: <strong>2.49</strong> ← drafter is code-distribution-trained</li>
-            <li>dm=32 wastes vs dm=16 (identical numbers)</li>
+            <li>256K ship config: <strong>67.95 tok/s</strong> · 21.73 GB (2× prior estimate)</li>
+            <li>1M TQ3: flat 5.6–6.6 tok/s, no cliff — unlocked by <code>daef232a6</code></li>
           </ul>
         </article>
         <article class="summary-card summary-dense">
@@ -1058,12 +1060,12 @@ ul.schema li::before {
           <ul class="card-list">
             <li>Code AL plateau: <strong>4.20</strong></li>
             <li>Creative AL plateau: <strong>5.12</strong> ← drafter generalises OOD</li>
-            <li>Long-ctx viable ≥128K (~24 tok/s); <strong>anomaly at 64K</strong> (1.78 tok/s)</li>
+            <li>Long-ctx viable ≥128K (~2.5 tok/s, real text); <strong>64K cliff resolved</strong> (2.54 tok/s post-rebase, was 1.78 tok/s anomaly)</li>
           </ul>
         </article>
       </div>
       <div class="prose-wrap">
-        <p class="summary-coda"><code>feature/gemma4-support</code> ships three speculative-decode paths — <strong>none</strong>, <strong>MTP</strong> (Multi-Token Prediction assistant), and <strong>DFlash</strong> (block-diffusion drafter). MTP is functional but uneconomic at 64K+ (≤2 % accept) and remains an open investigation. The path to these results required <strong>13 distinct ggml/llama.cpp fixes</strong>, none of which exist upstream — see §3 Discoveries.</p>
+        <p class="summary-coda"><code>feature/gemma4-support</code> ships three speculative-decode paths — <strong>none</strong>, <strong>MTP</strong> (Multi-Token Prediction assistant), and <strong>DFlash</strong> (block-diffusion drafter). MTP is functional but uneconomic at 64K+ (≤2 % accept) and remains an open investigation. The path to these results required <strong>15 distinct ggml/llama.cpp fixes</strong>, none of which exist upstream — see §3 Discoveries. Post-rebase (<code>daef232a6</code> + <code>4b0c158</code>): 1M TQ3 context confirmed on 24 GB, 256K ship config at <strong>67.95 tok/s</strong>.</p>
       </div>
     </section>
 
@@ -2354,7 +2356,7 @@ async function loadBench() {
   var status = document.getElementById('bench-status');
   var wrap = document.getElementById('bench-table-wrap');
   try {
-    var res = await fetch('scientific/results.csv', { cache: 'no-store' });
+    var res = await fetch('../scientific/results.csv', { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var text = await res.text();
     var parsed = parseCSV(text);
