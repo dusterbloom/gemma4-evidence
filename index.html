@@ -1024,16 +1024,16 @@ ul.schema li::before {
       <div class="hero-inner">
         <div class="branch-chip">feature/gemma4-support</div>
         <h1>Gemma4 rocking on the 3090</h1>
-        <p class="hero-sub">1 M tokens at 19.8 tok/s (23.7 with MTP). 256 K runs at 67.95 tok/s.<br>Includes: receipts, code, copy-paste configs.</p>
+        <p class="hero-sub">1 M tokens at 19.8 tok/s (23.7 with MTP). 256 K at 63.82 tok/s (peak 67.95).<br>Includes: receipts, code, copy-paste configs.</p>
         <div class="metric-chips">
           <span class="chip"><strong>6.64 J/tok</strong> best efficiency</span>
           <span class="chip"><strong>132 tok/s</strong> MoE peak (4K)</span>
-          <span class="chip"><strong>67.95 tok/s</strong> MoE 256K ship config</span>
+          <span class="chip"><strong>63.82 tok/s</strong> MoE 256K ship <em style="color:var(--text-sec);font-size:0.85em;">(peak 67.95)</em></span>
           <span class="chip"><strong>1M ctx</strong> TQ3 on 24 GB</span>
-          <span class="chip"><strong>15</strong> distinct fixes</span>
+          <span class="chip"><strong>20</strong> distinct fixes</span>
           <span class="chip"><strong>80</strong> commits, 4 days</span>
         </div>
-        <p class="hero-colophon">Built in 4 days (May 7–10, 2026; 80 commits across 4 unique days) by humans and AI in collaboration — direction over autonomy, simple tools over magic: ggml, git, a 24 GB GPU.</p>
+        <p class="hero-colophon">Built in 4 days (May 8–11, 2026; 101 commits across 4 unique days) by humans and AI in collaboration — direction over autonomy, simple tools over magic: ggml, git, a 24 GB GPU.</p>
       </div>
     </section>
 
@@ -1063,12 +1063,12 @@ ul.schema li::before {
             <h3>Speed king on code</h3>
           </header>
           <p class="card-hero"><strong>132.1</strong> tok/s<span class="card-sub">— code, dm=16</span></p>
-          <p class="card-detail">AL 5.22 · 11.82 J/tok · 18.9 GB · ~130 W average. Long-context (post-rebase): <strong>67.95 tok/s at 256K</strong> (Q8/Q8 + pflash + dm=4); <strong>1M context fits</strong> with TQ3/TQ3 + pflash at <strong>19.8 tok/s</strong>, 22.3 GB (1.7 GB headroom). MTP γ=2 pushes 1M to <strong>23.7 tok/s</strong> at 23.9 GB (sub-GB headroom).</p>
+          <p class="card-detail">AL 5.22 · 11.82 J/tok · 18.9 GB · ~130 W average. Long-context (post-rebase): <strong>63.82 tok/s at 256K</strong> (Q8/Q8 + pflash + dm=4, peak observed 67.95); <strong>1M context fits</strong> with TQ3/TQ3 + pflash at <strong>19.8 tok/s</strong>, 22.3 GB (1.7 GB headroom). MTP γ=2 pushes 1M to <strong>23.7 tok/s</strong> at 23.9 GB (sub-GB headroom).</p>
           <ul class="card-list">
             <li>Code AL plateau: <strong>5.22</strong></li>
             <li>Creative AL plateau: <strong>2.49</strong> ← drafter is code-distribution-trained</li>
-            <li>256K ship config: <strong>67.95 tok/s</strong> · 21.73 GB (2× prior estimate)</li>
-            <li>1M TQ3 + pflash: <strong>19.1–19.9 tok/s</strong> across three sweeps (no drafter); <strong>+MTP γ=2: 22.0–23.7 tok/s</strong> at 23.9 GB — cliff unlocked by <code>daef232a6</code></li>
+            <li>256K ship config: <strong>63.82 tok/s</strong> · 21.75 GB (peak observed 67.95; 2× prior estimate)</li>
+            <li>1M TQ3 + pflash: <strong>19.8–20.1 tok/s</strong> on code prompts across three sweeps (prose 19.12); <strong>+MTP γ=2: 22.0–23.7 tok/s</strong> at 23.9 GB — cliff unlocked by <code>daef232a6</code></li>
           </ul>
         </article>
         <article class="summary-card summary-dense">
@@ -1077,7 +1077,7 @@ ul.schema li::before {
             <h3>Generalist; better OOD drafter</h3>
           </header>
           <p class="card-hero"><strong>82.5</strong> tok/s<span class="card-sub">— creative, dm=32</span></p>
-          <p class="card-detail">AL 5.12 · 10.75 J/tok · 22.1 GB · peaks ~395 W on code. dm=16 essentially identical (81.7 tok/s).</p>
+          <p class="card-detail">AL 5.12 · 10.75 J/tok · 22.1 GB · avg ~318 W on dense_creative_dm1 (scientific sweep). dm=16 essentially identical (81.7 tok/s).</p>
           <ul class="card-list">
             <li>Code AL plateau: <strong>4.20</strong></li>
             <li>Creative AL plateau: <strong>5.12</strong> ← drafter generalises OOD</li>
@@ -1116,9 +1116,9 @@ ul.schema li::before {
               </tr>
               <tr>
                 <td>MoE 26B-A4B decode @ 256K</td>
-                <td class="num"><span class="badge-good">67.95 tok/s</span></td>
+                <td class="num"><span class="badge-good">63.82 tok/s</span><br><span style="font-size:0.82em;color:var(--text-sec);">peak observed 67.95</span></td>
                 <td>No published 3090 number at 256K</td>
-                <td>Uncontested; Q8/Q8 + DFlash + pflash + dm=4</td>
+                <td>Uncontested; Q8/Q8 + DFlash + pflash + dm=4 (closing sweep replicated mean)</td>
               </tr>
               <tr>
                 <td>MoE 26B-A4B max context (24 GB)</td>
@@ -1161,7 +1161,7 @@ ul.schema li::before {
         <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('tq3-frontier')">#</button>TQ3_0 Frontier — 1M context on 24 GB</h2>
         <p class="lede">Post-rebase (<code>daef232a6</code> + <code>4b0c158</code>), TQ3/TQ3 MoE generates coherently from 4K to 1M tokens with no cliff. Numbers below are measured on RTX 3090 24 GB, MoE 26B-A4B, TQ3_0/TQ3_0 KV, no drafter, n_predict=64.</p>
 
-        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">MoE 26B-A4B — TQ3/TQ3, no drafter, no pflash <em style="font-weight:400;color:var(--text-sec);font-size:0.85em;">(pre-pflash baseline; current ship adds pflash → 19.1–19.9 tok/s through 1M)</em></h3>
+        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">MoE 26B-A4B — TQ3/TQ3, no drafter, no pflash <em style="font-weight:400;color:var(--text-sec);font-size:0.85em;">(pre-pflash baseline; current ship adds pflash → 19.8–20.1 tok/s on code, 19.12 on prose, through 1M)</em></h3>
         <div class="table-wrap">
           <table>
             <thead>
@@ -1298,7 +1298,7 @@ ul.schema li::before {
         <div class="headline-callouts" style="margin-top:1.5rem;">
           <div class="callout-box" style="grid-column:1/-1;">
             <strong>Headline</strong>
-            <small>With pflash on (current ship), MoE TQ3 holds <strong>19.1–19.9 tok/s</strong> from 64K through 1M, no cliff. The table above is the pre-pflash <code>tq3-frontier/</code> baseline (5.6–6.6 tok/s) — TQ3 prefill dominates without chunked+pflash. 22.3 GB peak VRAM at 1M leaves 1.7 GB headroom on a 3090. TQ3/TQ3 pays a context-dependent decode-tok/s tax vs Q8/Q8 (Q8 saturates ≥512K) but unlocks contexts Q8 cannot reach.</small>
+            <small>With pflash on (current ship), MoE TQ3 holds <strong>19.8–20.1 tok/s</strong> on code prompts (prose 19.12) from 64K through 1M, no cliff. The table above is the pre-pflash <code>tq3-frontier/</code> baseline (5.6–6.6 tok/s) — TQ3 prefill dominates without chunked+pflash. 22.3 GB peak VRAM at 1M leaves 1.7 GB headroom on a 3090. TQ3/TQ3 pays a context-dependent decode-tok/s tax vs Q8/Q8 (Q8 saturates ≥512K) but unlocks contexts Q8 cannot reach.</small>
           </div>
         </div>
       </div>
@@ -1484,9 +1484,9 @@ ul.schema li::before {
 
         <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.75rem 0 0.5rem;">Real workloads now possible on 24 GB</h3>
         <ul style="margin:0 0 1.5rem 1.25rem;line-height:1.8;color:var(--text-main);">
-          <li><strong>Whole-codebase Q&amp;A</strong> — load a 200 K-token monorepo into context once, ask interactively at ~5.7 tok/s. Prefill runs at 1 392.9 tok/s so the 256 K initial load takes roughly 3 minutes, then questions are answered without reloading.</li>
-          <li><strong>Long-document summarization</strong> — entire 500-page PDFs (~400 K tokens) in a single shot at 5.77 tok/s decode, 20.13 GB peak VRAM. No chunking, no retrieval hacks.</li>
-          <li><strong>Agent loops with deep history</strong> — 1 M-token rolling context for tool-use agents that never need to re-summarise after every step. 22.26 GB peak leaves ~1.7 GB headroom for a small drafter or display server.</li>
+          <li><strong>Whole-codebase Q&amp;A</strong> — load a 200 K-token monorepo into context once, ask interactively at <strong>~64 tok/s</strong> (Q8/Q8 + pflash + DFlash dm=4). Prefill runs at ~5 000 tok/s so the 256 K initial load takes roughly <strong>50 seconds</strong>, then questions are answered without reloading.</li>
+          <li><strong>Long-document summarization</strong> — entire 500-page PDFs (~400 K tokens) in a single shot at <strong>~62 tok/s decode</strong> (Q8/Q8 + DFlash dm=4 at 512K, VRAM saturated near 24 GB). No chunking, no retrieval hacks.</li>
+          <li><strong>Agent loops with deep history</strong> — 1 M-token rolling context for tool-use agents that never need to re-summarise after every step. <strong>19.8 tok/s decode</strong> (no drafter, TQ3/TQ3 + pflash, 22.3 GB / 1.7 GB headroom) or <strong>23.7 tok/s with MTP γ=2</strong> at 23.9 GB (sub-GB headroom, edge of the wall).</li>
           <li><strong>Local privacy-first AI</strong> — none of this requires offload to RAM or disk; all weights and KV state remain in VRAM. Your data never leaves the machine.</li>
         </ul>
 
@@ -2290,9 +2290,9 @@ ul.schema li::before {
             </div>
           </details>
 
-          <!-- §1.6 Dense Ladder — open by default -->
-          <details id="dense-ladder" open>
-            <summary>§1.6 Dense-31B + DFlash + Q8/Q8 + dm=8 Ladder &mdash; latest 2026-05-10 <span class="arch-tag arch-tag-dense">Dense 31B</span></summary>
+          <!-- §1.6 Dense Ladder — closed by default; 1.78 anomaly resolved post-rebase -->
+          <details id="dense-ladder">
+            <summary>§1.6 Dense-31B + DFlash + Q8/Q8 + dm=8 Ladder &mdash; pre-rebase 2026-05-10 <em style="color:var(--text-sec);font-size:0.85em;">(1.78 tok/s 64K anomaly resolved post-<code>daef232a6</code>; see §Recipes for current Dense recipes)</em> <span class="arch-tag arch-tag-dense">Dense 31B</span></summary>
             <div class="details-body">
               <h3>Dense-31B + DFlash + Q8/Q8 + dm=8 Ladder</h3>
               <div class="table-wrap">
@@ -2354,8 +2354,8 @@ ul.schema li::before {
           <p class="arch-model-note"><em>Gemma-4-26B-A4B (MoE, ~4B active). Drafter: Gemma-4-DFlash 5-layer block-diffusion. (No MoE MTP drafter exists yet — see open question P1.)</em></p>
 
           <!-- §1.4 -->
-          <details id="scaling" open>
-            <summary>§1.4 Scaling Sweep &mdash; MoE DFlash Q8/Q8, 16K → 262K <span class="arch-tag arch-tag-moe">MoE 26B-A4B</span></summary>
+          <details id="scaling">
+            <summary>§1.4 Scaling Sweep &mdash; MoE DFlash Q8/Q8, 16K → 262K <em style="color:var(--text-sec);font-size:0.85em;">(pre-pflash baseline 2026-05-10; current ship configs in §Recipes give 60+ tok/s across this range)</em> <span class="arch-tag arch-tag-moe">MoE 26B-A4B</span></summary>
             <div class="details-body">
               <h3>Scaling Sweep — MoE + DFlash (Q8_0/Q8_0)</h3>
               <div class="table-wrap">
@@ -2695,7 +2695,7 @@ ul.schema li::before {
                           <tr>
                 <td class="disc-num">14</td>
                 <td class="disc-subsys">TQ3 long-context unlocked</td>
-                <td class="disc-text">Post-<code>daef232a6</code>, MoE TQ3 sustains 5.6–6.6 tok/s flat from 4K to 1M with sub-linear VRAM growth (~0.34 GiB / 64K ctx). 1M context on 24 GB confirmed. <em>Update: with pflash on (current ship config), this band shifts up to <strong>19.1–19.9 tok/s</strong> across 64K–1M — see Headline.</em></td>
+                <td class="disc-text">Post-<code>daef232a6</code>, MoE TQ3 sustains 5.6–6.6 tok/s flat from 4K to 1M with sub-linear VRAM growth (~0.34 GiB / 64K ctx). 1M context on 24 GB confirmed. <em>Update: with pflash on (current ship config), this band shifts up to <strong>19.8–20.1 tok/s</strong> on code prompts (prose 19.12) across 64K–1M — see Headline.</em></td>
                 <td class="disc-where">submodule <code>daef232a6</code><br>logs: <code>tq3-frontier/</code></td>
               </tr>
               <tr>
@@ -2777,7 +2777,7 @@ ul.schema li::before {
     <section class="section" id="timeline">
       <div class="prose-wrap">
         <p class="section-eyebrow">Chronology</p>
-        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('timeline')">#</button>Timeline — May 7–10, 2026</h2>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('timeline')">#</button>Timeline — May 7–11, 2026</h2>
         <div class="timeline">
           <div class="tl-item">
             <div class="tl-date">May 7</div>
@@ -2850,7 +2850,7 @@ ul.schema li::before {
         <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('open-questions')">#</button>Open Questions</h2>
         <h3 style="font-size:1.05rem;margin-top:0.5rem;">Resolved this session</h3>
         <ul class="prose-list">
-          <li><s>Dense-31B 64K decode collapse — 1.78 tok/s, AL=1.94.</s> <strong>Resolved</strong> post-rebase (commit <code>daef232a6</code>): 64K decode now <strong>2.54 tok/s with TQ3/TQ3, 6.26 tok/s no-MTP at 64K, 10.1 tok/s with γ=2 MTP</strong>. The "1.78 anomaly" was the pre-rebase TQ3 dispatcher bug.</li>
+          <li><s>Dense-31B 64K decode collapse — 1.78 tok/s, AL=1.94.</s> <strong>Resolved</strong> post-rebase (commit <code>daef232a6</code>): Dense-31B 64K decode now <strong>2.54 tok/s</strong> with TQ3/TQ3 (no drafter, no pflash); <strong>6.26 tok/s</strong> with TQ3/TQ3 + pflash baseline; <strong>10.07 tok/s</strong> with MTP γ=2 (+61% over the +pflash baseline). The "1.78 anomaly" was the pre-rebase TQ3 dispatcher bug.</li>
           <li><s>MTP accept ≤ 2% at 64K.</s> <strong>Resolved</strong>: post-rebase γ=1 accept = 0.69; γ=2 chain accept = <strong>0.73</strong>. The earlier figure was pre-Bug-2 noise on a broken binary.</li>
           <li><s>MTP semantic mode collapse (tokens cycle between id 109 / 49).</s> <strong>Resolved</strong>: same binary fix; current γ=2 at 64K produces coherent output with mean_accept_drafts = 1.46 / 2.</li>
           <li><s>fattn.cu:652 MTP+Q8 latent crash.</s> <strong>Resolved</strong> by Bug-2 (<code>daef232a6</code>) + Bug-3 (<code>f1f811e</code>); MTP + Q8 V-cache now runs cleanly through the chain.</li>
@@ -2920,7 +2920,7 @@ ul.schema li::before {
 
     <!-- ── Footer ───────────────────────────────────────────── -->
     <footer>
-      <p>Generated 2026-05-10 &nbsp;&middot;&nbsp; Branch <code>feature/gemma4-support</code> &nbsp;&middot;&nbsp; Evidence files in <code>.sisyphus/notes/gemma4-baseline/</code></p>
+      <p>Generated 2026-05-11 &nbsp;&middot;&nbsp; Branch <code>feature/gemma4-support</code> &nbsp;&middot;&nbsp; Evidence files in <code>.sisyphus/notes/gemma4-baseline/</code></p>
     </footer>
 
   </main>
