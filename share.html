@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gemma 4 on a 3090 — TL;DR</title>
+<meta name="description" content="Gemma 4 26B-A4B running at 64–132 tok/s on a single RTX 3090, with 1M context. Receipts at /">
+<meta property="og:title" content="Gemma 4 on a 3090 — TL;DR">
+<meta property="og:description" content="MoE 26B-A4B: 132 tok/s at 4K, 64 tok/s at 256K, 20 tok/s at 1M. 24 GB. Receipts inside.">
+<meta property="og:type" content="article">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #FAF7F2;
+  --bg-card:   #F5F1EB;
+  --text:      #1A1915;
+  --text-sec:  #5C5A54;
+  --accent:    #CC785C;
+  --border:    #E8E4DC;
+  --good:      #3F6F4F;
+  --serif:     "Fraunces", Georgia, serif;
+  --sans:      -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono:      "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--sans);
+  line-height: 1.55; min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: clamp(1rem, 4vw, 2.5rem);
+}
+.wrap { width: 100%; max-width: 720px; }
+header { text-align: center; margin-bottom: 1.75rem; }
+.chip-branch {
+  display: inline-block;
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--accent); background: var(--bg-card);
+  border: 1px solid var(--border); padding: 0.18rem 0.55rem;
+  border-radius: 999px; letter-spacing: 0.02em; margin-bottom: 0.65rem;
+}
+h1 {
+  font-family: var(--serif); font-weight: 600;
+  font-size: clamp(1.7rem, 5vw, 2.4rem);
+  line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 0.4rem;
+}
+.lede {
+  color: var(--text-sec); font-size: clamp(0.95rem, 2.5vw, 1.05rem);
+  max-width: 32rem; margin: 0 auto;
+}
+.kpi-grid {
+  display: grid; gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-bottom: 1.5rem;
+}
+.kpi {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.85rem 0.9rem;
+}
+.kpi-val { font-family: var(--serif); font-weight: 600; font-size: 1.5rem; line-height: 1; color: var(--accent); }
+.kpi-lbl { font-size: 0.78rem; color: var(--text-sec); margin-top: 0.3rem; }
+.kpi-sub { font-size: 0.72rem; color: var(--text-sec); margin-top: 0.15rem; font-style: italic; }
+section { margin-bottom: 1.5rem; }
+h2 {
+  font-family: var(--serif); font-weight: 500;
+  font-size: 1.05rem; color: var(--text-sec);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 0.6rem;
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+th, td { text-align: left; padding: 0.5rem 0.55rem; border-bottom: 1px solid var(--border); }
+th { font-family: var(--serif); font-weight: 500; color: var(--text-sec); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+td.num { font-family: var(--mono); text-align: right; white-space: nowrap; }
+td strong { color: var(--accent); }
+.recipe {
+  background: #1A1915; color: #FAF7F2;
+  border-radius: 8px; padding: 0.9rem 1rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  line-height: 1.55; overflow-x: auto; white-space: pre;
+}
+.recipe .comment { color: #8a847a; }
+.note {
+  font-size: 0.82rem; color: var(--text-sec);
+  border-left: 2px solid var(--accent);
+  padding: 0.4rem 0.75rem; background: var(--bg-card);
+  border-radius: 0 6px 6px 0;
+}
+footer {
+  margin-top: 1rem; padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem; color: var(--text-sec);
+  text-align: center;
+}
+footer a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--border); }
+footer a:hover { border-bottom-color: var(--accent); }
+@media (max-width: 480px) {
+  .kpi-val { font-size: 1.25rem; }
+  table { font-size: 0.82rem; }
+  th, td { padding: 0.4rem 0.35rem; }
+  .recipe { font-size: 0.72rem; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="chip-branch">feature/gemma4-support · RTX 3090 24 GB</div>
+    <h1>Gemma 4 on a 3090</h1>
+    <p class="lede">MoE 26B-A4B at 132 tok/s on short prompts, 64 tok/s through 256K context, 20 tok/s at 1M. Single 24 GB consumer GPU. No offloading.</p>
+  </header>
+
+  <section>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-val">132</div><div class="kpi-lbl">tok/s · MoE 4K</div><div class="kpi-sub">peak, AL 5.22, dm=16</div></div>
+      <div class="kpi"><div class="kpi-val">63.8</div><div class="kpi-lbl">tok/s · MoE 256K</div><div class="kpi-sub">replicated mean (peak 67.95)</div></div>
+      <div class="kpi"><div class="kpi-val">19.8</div><div class="kpi-lbl">tok/s · MoE 1M</div><div class="kpi-sub">23.7 with MTP γ=2</div></div>
+      <div class="kpi"><div class="kpi-val">6.64</div><div class="kpi-lbl">J/tok · best</div><div class="kpi-sub">MoE creative, dm=2</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Regime map — which config wins</h2>
+    <table>
+      <thead><tr><th>Model · ctx</th><th>Config</th><th class="num">tok/s</th></tr></thead>
+      <tbody>
+        <tr><td><strong>MoE</strong> · 4K–32K</td><td>Q8/Q8 + pflash + DFlash dm=16</td><td class="num"><strong>132</strong></td></tr>
+        <tr><td><strong>MoE</strong> · 64K–512K</td><td>Q8/Q8 + pflash + DFlash dm=4</td><td class="num"><strong>64–68</strong></td></tr>
+        <tr><td><strong>MoE</strong> · 1M</td><td>TQ3/TQ3 + pflash + MTP γ=2</td><td class="num"><strong>23.7</strong></td></tr>
+        <tr><td>Dense · 4K</td><td>Q8/Q8 + DFlash dm=16</td><td class="num">82</td></tr>
+        <tr><td>Dense · 32K–128K</td><td>TQ3/TQ3 + pflash + MTP γ=2</td><td class="num">10</td></tr>
+        <tr><td>Dense · ≥256K</td><td colspan="2" style="color:var(--text-sec);font-style:italic;">infeasible on 24 GB</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Run it — MoE 256K ship config</h2>
+    <pre class="recipe"><span class="comment"># Q8/Q8 KV + pflash + DFlash dm=4 → 64 tok/s decode at 256K, 21.75 GB</span>
+python3 dflash/scripts/server.py \
+  --target /path/to/gemma-4-26B-A4B-it-UD-Q4_K_M.gguf \
+  --draft  /path/to/gemma-4-26B-A4B-dflash-q8_0.gguf \
+  --ctk q8_0 --ctv q8_0 \
+  --max-ctx 262144 \
+  --pflash --budget 4 \
+  --port 8080</pre>
+  </section>
+
+  <section>
+    <p class="note"><strong>VRAM headroom at 1M:</strong> 1.7 GB no drafter, 120 MB with MTP γ=2 — the second is the wall. Use it deliberately.</p>
+  </section>
+
+  <footer>
+    <p><a href="/">Full evidence, 20 fixes, every measurement →</a></p>
+    <p style="margin-top:0.4rem;">Built May 8–11, 2026 · 101 commits · ggml + git + 24 GB</p>
+  </footer>
+
+</div>
+</body>
+</html>
