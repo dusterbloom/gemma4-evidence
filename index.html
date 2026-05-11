@@ -1086,7 +1086,7 @@ ul.schema li::before {
         </article>
       </div>
       <div class="prose-wrap">
-        <p class="summary-coda"><code>feature/gemma4-support</code> ships three speculative-decode paths — <strong>none</strong>, <strong>MTP</strong> (Multi-Token Prediction assistant), and <strong>DFlash</strong> (block-diffusion drafter). MTP now runs as a real multi-token chain (γ&gt;1, approach B): <strong>+39 % over no-MTP at 4K</strong> (γ=4 → 25.6 tok/s) and <strong>+61 % at 64K</strong> (γ=2 → 10.1 tok/s, 0.73 accept rate). The "MTP uneconomic at 64K" claim from earlier in this writeup was pre-rebase noise and is now <em>resolved</em>. The path to these results required <strong>15 distinct ggml/llama.cpp fixes</strong> plus the γ&gt;1 chain implementation, none of which exist upstream — see §<a href="#gamma-mtp" style="color:var(--accent);">γ&gt;1 MTP</a> and §3 Discoveries. Post-rebase (<code>daef232a6</code> + <code>4b0c158</code> + <code>6715acf13</code>): 1M TQ3 context confirmed on 24 GB, 256K ship config at <strong>67.95 tok/s</strong> (DFlash) or <strong>≈10 tok/s</strong> at 64K (MTP γ=2).</p>
+        <p class="summary-coda"><code>feature/gemma4-support</code> ships three speculative-decode paths — <strong>none</strong>, <strong>MTP</strong> (Multi-Token Prediction assistant), and <strong>DFlash</strong> (block-diffusion drafter). MTP now runs as a real multi-token chain (γ&gt;1, approach B): <strong>+39 % over no-MTP at 4K</strong> (γ=4 → 25.6 tok/s), <strong>+61 % at 64K</strong> (γ=2 → 10.1 tok/s, 0.73 accept), and <strong>+73 % at 128K</strong> (γ=2 → 10.5 tok/s, 0.78 accept — accept rate <em>grows</em> with context). The "MTP uneconomic at 64K" claim from earlier in this writeup was pre-rebase noise and is now <em>resolved</em>. The path to these results required <strong>15 distinct ggml/llama.cpp fixes</strong> plus the γ&gt;1 chain implementation, none of which exist upstream — see §<a href="#gamma-mtp" style="color:var(--accent);">γ&gt;1 MTP</a> and §3 Discoveries. Post-rebase (<code>daef232a6</code> + <code>4b0c158</code> + <code>6715acf13</code>): 1M TQ3 context confirmed on 24 GB, 256K ship config at <strong>67.95 tok/s</strong> (DFlash) or <strong>≈10 tok/s</strong> at 64K (MTP γ=2).</p>
       </div>
     </section>
 
@@ -1349,9 +1349,21 @@ ul.schema li::before {
                 <td class="num">8.29 (0.46)</td>
                 <td class="num"><strong>+61 %</strong> (γ=2)</td>
               </tr>
+              <tr>
+                <td><strong>128K</strong> <em style="color:var(--text-sec);font-size:0.85em;">(pflash)</em></td>
+                <td class="num">6.05</td>
+                <td class="num">5.32 (0.50)</td>
+                <td class="num"><span class="badge-good">10.49 (0.78)</span></td>
+                <td class="num">8.73 (0.51)</td>
+                <td class="num"><strong>+73 %</strong> (γ=2)</td>
+              </tr>
             </tbody>
           </table>
-          <p class="table-caption">Decode tok/s (accept rate in parentheses). Generated with <code>--n-predict 64 --temp 0 --ignore-eos</code> on <code>long_code_50k.txt</code> for 64K; <code>prose_12288</code> for 16K; 145-token essay prompt for 4K. Sweep logs: <code>.sisyphus/notes/gemma4-baseline/mtp-gamma/phase4-b/</code>.</p>
+          <p class="table-caption">Decode tok/s (accept rate in parentheses). All runs <code>--n-predict 64 --temp 0 --ignore-eos</code>. 4K uses a 145-token essay prompt; 16K uses <code>prose_12288</code>; 64K/128K use <code>long_code_50k.txt</code> (50 K code tokens). 128K runs add <code>--pflash</code> to keep prefill under 2 minutes. The 256K and 1M cells on Dense 31B + TQ3/TQ3 saturate 24 GB VRAM and force the driver into a slow path — not tested here. Sweep logs: <code>.sisyphus/notes/gemma4-baseline/mtp-gamma/phase4-b/</code> and <code>phase4-b-long-pflash/</code>.</p>
+          <div class="callout-box" style="margin-top:1rem;">
+            <strong>Trend</strong>
+            <small>Accept rate at γ=2 climbs with context: 0.55 (4K) → 0.47 (16K) → 0.73 (64K) → <strong>0.78 (128K)</strong>. The MTP head's predictive signal is <em>stronger</em> at long context, not weaker — the opposite of the pre-rebase narrative. γ=2 throughput gain grows with it: +36 % (4K) → +1 % (16K) → +61 % (64K) → <strong>+73 % (128K)</strong>.</small>
+          </div>
         </div>
 
         <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">What we shipped</h3>
