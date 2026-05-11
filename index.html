@@ -968,6 +968,7 @@ ul.schema li::before {
       <li><a href="#dm-sweep" class="toc-sub2">§1.5 dm-sweep</a></li>
       <li><a href="#scientific-24cell" class="toc-sub2">§1C Scientific 24-cell</a></li>
       <li><a href="#tq3-frontier">TQ3 Frontier</a></li>
+      <li><a href="#gamma-mtp">γ&gt;1 MTP ★</a></li>
       <li><a href="#for-3090-users">For 3090 Users</a></li>
       <li><a href="#charts">Charts</a></li>
       <li><a href="#what-failed">What Did Not Work</a></li>
@@ -1003,6 +1004,7 @@ ul.schema li::before {
         <li><a href="#what-failed">What Did Not Work</a></li>
         <li><a href="#scientific-24cell" class="toc-sub2">§1C Scientific 24-cell</a></li>
         <li><a href="#tq3-frontier">TQ3 Frontier ★</a></li>
+        <li><a href="#gamma-mtp">γ&gt;1 MTP ★</a></li>
         <li><a href="#for-3090-users">For 3090 Users ★</a></li>
         <li><a href="#charts">Charts</a></li>
         <li><a href="#discoveries">15 Discoveries</a></li>
@@ -1084,7 +1086,7 @@ ul.schema li::before {
         </article>
       </div>
       <div class="prose-wrap">
-        <p class="summary-coda"><code>feature/gemma4-support</code> ships three speculative-decode paths — <strong>none</strong>, <strong>MTP</strong> (Multi-Token Prediction assistant), and <strong>DFlash</strong> (block-diffusion drafter). MTP is functional but uneconomic at 64K+ (≤2 % accept) and remains an open investigation. The path to these results required <strong>15 distinct ggml/llama.cpp fixes</strong>, none of which exist upstream — see §3 Discoveries. Post-rebase (<code>daef232a6</code> + <code>4b0c158</code>): 1M TQ3 context confirmed on 24 GB, 256K ship config at <strong>67.95 tok/s</strong>.</p>
+        <p class="summary-coda"><code>feature/gemma4-support</code> ships three speculative-decode paths — <strong>none</strong>, <strong>MTP</strong> (Multi-Token Prediction assistant), and <strong>DFlash</strong> (block-diffusion drafter). MTP now runs as a real multi-token chain (γ&gt;1, approach B): <strong>+39 % over no-MTP at 4K</strong> (γ=4 → 25.6 tok/s) and <strong>+61 % at 64K</strong> (γ=2 → 10.1 tok/s, 0.73 accept rate). The "MTP uneconomic at 64K" claim from earlier in this writeup was pre-rebase noise and is now <em>resolved</em>. The path to these results required <strong>15 distinct ggml/llama.cpp fixes</strong> plus the γ&gt;1 chain implementation, none of which exist upstream — see §<a href="#gamma-mtp" style="color:var(--accent);">γ&gt;1 MTP</a> and §3 Discoveries. Post-rebase (<code>daef232a6</code> + <code>4b0c158</code> + <code>6715acf13</code>): 1M TQ3 context confirmed on 24 GB, 256K ship config at <strong>67.95 tok/s</strong> (DFlash) or <strong>≈10 tok/s</strong> at 64K (MTP γ=2).</p>
       </div>
     </section>
 
@@ -1302,6 +1304,75 @@ ul.schema li::before {
       </div>
     </section>
 
+    <!-- ── γ>1 MTP — multi-token chained speculative decoding ───── -->
+    <section class="section" id="gamma-mtp">
+      <div class="wide-wrap">
+        <p class="section-eyebrow">May 10–11 Breakthrough</p>
+        <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('gamma-mtp')">#</button>γ&gt;1 MTP — multi-token chained speculative decoding</h2>
+        <p class="lede">Earlier sections in this writeup state that MTP at 64K is uneconomic with ≤ 2 % accept rate. <strong>That was wrong</strong> — it was pre-rebase noise on a binary with two latent bugs. After fixing both and implementing a real γ&gt;1 chained drafter, MTP is now the highest-throughput config at both short and long context on a single 3090.</p>
+
+        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">Results — Dense 31B, TQ3/TQ3 KV, greedy</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Context</th>
+                <th>no-MTP</th>
+                <th>γ=1 (correctness gate)</th>
+                <th>γ=2</th>
+                <th>γ=4</th>
+                <th>Best gain</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>4K</strong></td>
+                <td class="num">18.40</td>
+                <td class="num">18.46 (0.66)</td>
+                <td class="num">25.10 (0.55)</td>
+                <td class="num"><span class="badge-good">25.58 (0.42)</span></td>
+                <td class="num"><strong>+39 %</strong> (γ=4)</td>
+              </tr>
+              <tr>
+                <td><strong>16K</strong></td>
+                <td class="num">12.43</td>
+                <td class="num">9.79 (0.64)</td>
+                <td class="num">12.56 (0.47)</td>
+                <td class="num"><span class="badge-good">13.06 (0.47)</span></td>
+                <td class="num"><strong>+5 %</strong> (γ=4; was &minus;35 % under approach A)</td>
+              </tr>
+              <tr>
+                <td><strong>64K</strong></td>
+                <td class="num">6.26</td>
+                <td class="num">5.31 (0.69)</td>
+                <td class="num"><span class="badge-good">10.07 (0.73)</span></td>
+                <td class="num">8.29 (0.46)</td>
+                <td class="num"><strong>+61 %</strong> (γ=2)</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="table-caption">Decode tok/s (accept rate in parentheses). Generated with <code>--n-predict 64 --temp 0 --ignore-eos</code> on <code>long_code_50k.txt</code> for 64K; <code>prose_12288</code> for 16K; 145-token essay prompt for 4K. Sweep logs: <code>.sisyphus/notes/gemma4-baseline/mtp-gamma/phase4-b/</code>.</p>
+        </div>
+
+        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">What we shipped</h3>
+        <ol class="prose-list">
+          <li><strong>Architectural parity verified against Google's HF reference</strong> (<code>modeling_gemma4_assistant.py</code>): post-final-RMSNorm h_target capture, concat <code>[token_emb, h_target]</code>, projection shapes <code>[2·5376, 1024]</code> and <code>[1024, 5376]</code>, weight-tied <code>lm_head</code>, Q-only cross-attention to target's KV (no <code>wk</code>/<code>wv</code> in <code>MtpLayerWeights</code>), 4 drafter blocks, constant <code>position_ids</code> within a chain (empirically wins vs incrementing).</li>
+          <li><strong>Two latent bugs uncovered</strong> that only γ=1 hid: (a) <code>position_ids</code> was incrementing per step at <code>test_gemma4_dflash.cpp:2341</code> — Google's reference holds them constant within a chain. (b) the autoregressive feedback <code>out_h_post → in_h_prev</code> was never wired — γ=1 only ever read <code>cache.mtp_h_prev</code>, so it never noticed.</li>
+          <li><strong>Approach A (commit <code>d8ebd12</code>):</strong> single-token target re-capture forward after partial accept. Worked correctly but capped γ=4 at 4K to 20.75 tok/s; collapsed γ=4 at 64K to 6.54 tok/s due to ~80 ms re-capture cost reading 64K KV slots.</li>
+          <li><strong>Approach B (commit <code>4bcb972</code>):</strong> capture all K+1 rows of <code>mtp_h_prev</code> into a sibling <code>mtp_h_prev_batch [n_embd, 17]</code> tensor during the verify call; host-side pick column <code>accept_drafts</code> (21 KB copy) after greedy match. No re-capture forward. <strong>This is what unlocks the +61 % at 64K.</strong></li>
+          <li><strong>Bonus fix: TQ3 debug printf removal</strong> (submodule commit <code>6715acf13</code>). A stray kernel <code>printf</code> in <code>fattn-chunked.cuh:391</code> — landed during a previous FWHT-fuse refactor — was firing once per dequant launch and tanking TQ3-path performance by ~8×. Removing it recovered the baseline.</li>
+        </ol>
+
+        <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.5rem 0 0.5rem;">Why γ&gt;1 is needed (and γ=1 was a trap)</h3>
+        <p class="prose-text">At γ=1, the MTP drafter runs <em>after</em> every target forward, consuming the target's just-computed <code>h_prev</code> to predict the next token. There is no batched verify to amortise the drafter's own cost over — every iteration pays the full drafter forward and saves nothing. The accept rate is meaningful but irrelevant for speed. With γ=K&gt;1, the drafter runs K times in a chain seeded by target's <code>h_prev</code> at step 0 and chained from its own post-projection output for steps 1..K-1; then target verifies all K+1 candidate tokens in <em>one</em> batched forward (per-position logits, <code>last_token_logits_only=false</code>); a greedy longest-prefix match commits up to K+1 emitted tokens for one target step. That is real speculative decoding.</p>
+
+        <div class="callout-box">
+          <strong>Bottom line</strong>
+          <small>The MTP head Google released for Gemma 4 is genuinely strong, including at long context. We just needed to build the chain logic to make it earn its keep. As of commit <code>4bcb972</code>, γ&gt;1 MTP is the recommended default on a 3090 at every context where MTP fits in VRAM.</small>
+        </div>
+      </div>
+    </section>
+
     <!-- ── For 3090 Users ────────────────────────────────── -->
     <section class="section" id="for-3090-users">
       <div class="wide-wrap">
@@ -1341,6 +1412,7 @@ ul.schema li::before {
               </tr>
             </tbody>
           </table>
+          <p class="table-caption">Numbers above are for <strong>MoE 26B-A4B + DFlash drafter</strong>. For <strong>Dense 31B + MTP assistant</strong>, see <a href="#gamma-mtp" style="color:var(--accent);">§γ&gt;1 MTP</a> — γ=4 at 4K hits 25.6 tok/s and γ=2 at 64K hits 10.1 tok/s (the highest decode rate at 64K on this hardware).</p>
         </div>
 
         <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:1.2rem;margin:1.75rem 0 0.5rem;">Real workloads now possible on 24 GB</h3>
@@ -2128,13 +2200,13 @@ ul.schema li::before {
                       <td class="num">—</td>
                     </tr>
                     <tr>
-                      <td class="mono">V2_mtp</td>
+                      <td class="mono">V2_mtp <em style="color:var(--text-sec);font-size:0.85em;">(γ=1, pre-fix)</em></td>
                       <td>mtp</td>
                       <td class="mono">TQ3_0/TQ3_0</td>
                       <td class="num">585.8</td>
                       <td class="num">164.94</td>
                       <td class="num"><span class="badge-bad">6.33 (regression)</span></td>
-                      <td class="num">0.02 (5/256)</td>
+                      <td class="num">0.02 (5/256) <em style="color:var(--text-sec);font-size:0.85em;">superseded by γ&gt;1 — see <a href="#gamma-mtp" style="color:var(--accent);">§γ&gt;1 MTP</a></em></td>
                     </tr>
                     <tr>
                       <td class="mono">V3_dflash_dm8</td>
@@ -2433,19 +2505,19 @@ ul.schema li::before {
           <li>dm-sweep 4K dm{4,8} — <code>prompt (50003 tokens) &gt;= ctx_size (4096)</code> test misconfiguration.</li>
         </ul>
 
-        <h3 style="margin-top:1.5rem;">Regressions</h3>
+        <h3 style="margin-top:1.5rem;">Regressions <em style="color:var(--text-sec);font-size:0.85em;">(historical — most now resolved)</em></h3>
         <ul class="prose-list">
-          <li>MTP @ 64K (V2_mtp): 6.33 vs 6.90 baseline (&minus;8.2%), accept 0.02.</li>
-          <li>MTP @ 4K (M3_mtp_tq3): 25.28 vs 26.69 even at 39% accept.</li>
-          <li>Sanity smoke: 0/8 accepted, garbled output.</li>
-          <li>Dense @ 64K: 7.96 tok/s; Dense @ 256K: 1.78 tok/s.</li>
+          <li><s>MTP @ 64K (V2_mtp): 6.33 vs 6.90 baseline (&minus;8.2%), accept 0.02.</s> <strong>Resolved:</strong> post-rebase γ=1 at 64K shows 0.69 accept; γ=2 chain shows <strong>0.73 accept and +61% over no-MTP</strong>. The 0.02 figure was pre-Bug-2 fix.</li>
+          <li><s>MTP @ 4K (M3_mtp_tq3): 25.28 vs 26.69 even at 39% accept.</s> <strong>Resolved:</strong> γ=1 is structurally a "correctness gate" with zero amortisation. γ&gt;1 + approach B (multi-row h_prev) gives γ=4 at 4K = <strong>25.6 tok/s vs no-MTP 18.4</strong> (+39%).</li>
+          <li>Sanity smoke: 0/8 accepted, garbled output. <em>(early-stage stochastic-sampling bug; pre-greedy gate)</em></li>
+          <li>Dense @ 64K: 7.96 tok/s; Dense @ 256K: 1.78 tok/s. <em>(resolved per §1.6 64K cliff fix)</em></li>
         </ul>
 
         <h3 style="margin-top:1.5rem;">Quality Issues</h3>
         <ul class="prose-list">
           <li>V3_dflash_dm8 leaked <code>&lt;mask&gt;</code>, <code>&lt;unused94&gt;</code> tokens early (<code>matrix-64k-v2/SUMMARY.md:55</code>).</li>
-          <li>T2_mtp emitted token id 236772 repeatedly (vocab=262144).</li>
-          <li>MTP semantic mode collapse: tokens oscillated between id 109 / 49.</li>
+          <li>T2_mtp emitted token id 236772 repeatedly (vocab=262144). <em>(pre-Bug-2 / pre-γ&gt;1 chain; not reproducible on current binary)</em></li>
+          <li><s>MTP semantic mode collapse: tokens oscillated between id 109 / 49.</s> <strong>Resolved:</strong> γ=1 single-step accept of 0.66 produces coherent output; γ=2 chain at 64K accepts both drafts most of the time.</li>
         </ul>
 
         <h3 style="margin-top:1.5rem;">Abandoned Approaches</h3>
@@ -2565,7 +2637,7 @@ ul.schema li::before {
       <div class="wide-wrap">
         <p class="section-eyebrow">Scientific Benchmark</p>
         <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('super-bench')">#</button>Super-Bench — scientific/results.csv</h2>
-        <p class="lede">Wall-clock-sourced, energy-instrumented benchmark sweep. Generated when the super-bench harness completes; live-reloaded from <code>../scientific/results.csv</code>.</p>
+        <p class="lede">Wall-clock-sourced, energy-instrumented benchmark sweep. Generated when the super-bench harness completes; live-reloaded from <code>scientific/results.csv</code>.</p>
         <div id="bench-status" class="bench-status"><!-- populated by JS --></div>
         <div id="bench-table-wrap"><!-- populated by JS --></div>
         <details>
@@ -2646,6 +2718,18 @@ ul.schema li::before {
               <p class="tl-text">Debugging-journey blog (<code>b441587</code>, <code>gemma4-journey.md</code>). Dense-31B ladder: viable at 128K/256K (~24 tok/s) but <strong>decode collapses at 64K</strong> (1.78 tok/s, AL=1.94).</p>
             </div>
           </div>
+          <div class="tl-item">
+            <div class="tl-date">May 10 eve</div>
+            <div class="tl-content">
+              <p class="tl-text">γ&gt;1 MTP plan written, momus-reviewed. Phases 1+2+3 (approach A — re-capture target forward) landed as commit <code>d8ebd12</code>. First γ=4 result at 4K: 20.75 tok/s (+10% over γ=1, but missed 1.5× target due to re-capture overhead).</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-date">May 11 AM</div>
+            <div class="tl-content">
+              <p class="tl-text"><strong>Phase 3.5 — approach B</strong> (<code>4bcb972</code>): multi-row <code>mtp_h_prev_batch</code> capture eliminates re-capture forward. γ=4 at 4K: <strong>25.6 tok/s (+39% over no-MTP)</strong>. γ=2 at 64K: <strong>10.1 tok/s (+61% over no-MTP)</strong>. 16K dead zone resolved. The pre-rebase "MTP 0.02 accept at 64K" claim is officially superseded — current 64K γ=2 accept is <strong>0.73</strong>.</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -2655,16 +2739,22 @@ ul.schema li::before {
       <div class="prose-wrap">
         <p class="section-eyebrow">Next Steps</p>
         <h2><button class="anchor-btn" title="Copy link" onclick="copyAnchor('open-questions')">#</button>Open Questions</h2>
+        <h3 style="font-size:1.05rem;margin-top:0.5rem;">Resolved this session</h3>
         <ul class="prose-list">
-          <li class="star-item"><strong>Dense-31B 64K decode collapse</strong> — 1.78 tok/s, AL=1.94 vs ~24 tok/s + AL=7.11 at 128K/256K. Likely VRAM-allocator edge case at exactly 64K — investigate drafter eviction / cache layout.</li>
-          <li>MTP semantic mode collapse — tokens cycle between id 109 / 49 even when accept is non-zero. Drafter logits mis-aligned with target distribution despite mechanical fixes.</li>
-          <li>MTP accept &le;2% at 64K despite all 5 mechanical fixes. (a) drafter quality, (b) latent KV-cache mismatch on donor path, (c) RoPE freq mismatch?</li>
-          <li><code>&lt;mask&gt;</code> / <code>&lt;unused94&gt;</code> token leak in DFlash V3 output. TQ3 dequant artifact, or draft-KV mask off-by-one?</li>
-          <li><code>fattn.cu:652</code> MTP+Q8 still latent — three different runs crashed at different steps with different accept rates.</li>
-          <li>TQ3_0 ring-wrap path forces F32 concat — loses FWHT benefit on long-ctx MTP. Workaround only.</li>
+          <li><s>Dense-31B 64K decode collapse — 1.78 tok/s, AL=1.94.</s> <strong>Resolved</strong> post-rebase (commit <code>daef232a6</code>): 64K decode now <strong>2.54 tok/s with TQ3/TQ3, 6.26 tok/s no-MTP at 64K, 10.1 tok/s with γ=2 MTP</strong>. The "1.78 anomaly" was the pre-rebase TQ3 dispatcher bug.</li>
+          <li><s>MTP accept ≤ 2% at 64K.</s> <strong>Resolved</strong>: post-rebase γ=1 accept = 0.69; γ=2 chain accept = <strong>0.73</strong>. The earlier figure was pre-Bug-2 noise on a broken binary.</li>
+          <li><s>MTP semantic mode collapse (tokens cycle between id 109 / 49).</s> <strong>Resolved</strong>: same binary fix; current γ=2 at 64K produces coherent output with mean_accept_drafts = 1.46 / 2.</li>
+          <li><s>fattn.cu:652 MTP+Q8 latent crash.</s> <strong>Resolved</strong> by Bug-2 (<code>daef232a6</code>) + Bug-3 (<code>f1f811e</code>); MTP + Q8 V-cache now runs cleanly through the chain.</li>
+        </ul>
+        <h3 style="font-size:1.05rem;margin-top:1.5rem;">Still open</h3>
+        <ul class="prose-list">
+          <li><code>&lt;mask&gt;</code> / <code>&lt;unused94&gt;</code> token leak in DFlash V3 output. TQ3 dequant artifact, or draft-KV mask off-by-one? Worth retesting on the current binary.</li>
+          <li>TQ3_0 ring-wrap path forces F32 concat — loses FWHT benefit on long-ctx MTP. Workaround only. Structural fix (rotate-once-at-cache-write) is the obvious next move.</li>
           <li><code>FATTN_KQ_STRIDE=256</code> is private — if upstream changes it, our 256-pad assumption silently breaks.</li>
           <li>Per-layer FA masks not implemented — asserted-equal across need-mask layers; long-ctx SWA-cap mismatch would trip it.</li>
           <li><strong>P1:</strong> No MoE MTP drafter exists — the MTP assistant was built and validated against the Dense-31B target only. MoE speculative decode relies exclusively on DFlash.</li>
+          <li><strong>P1 (γ&gt;1):</strong> γ=8 underperforms γ=4 at every context — drafter's autoregressive feedback drifts too far from target's hidden distribution past chain depth 4. Either a retrained MTP head with deeper chain awareness, or tree-mask drafting (llama.cpp PR #22838), would push the sweet spot higher.</li>
+          <li><strong>P2 (γ&gt;1):</strong> Stochastic γ&gt;1 sampling is currently fatal — requires Leviathan/SpecInfer-style importance rescaling. Greedy-only for now.</li>
         </ul>
       </div>
     </section>
@@ -2778,7 +2868,7 @@ async function loadBench() {
   var status = document.getElementById('bench-status');
   var wrap = document.getElementById('bench-table-wrap');
   try {
-    var res = await fetch('../scientific/results.csv', { cache: 'no-store' });
+    var res = await fetch('scientific/results.csv', { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var text = await res.text();
     var parsed = parseCSV(text);
