@@ -129,8 +129,9 @@ footer a:hover { border-bottom-color: var(--accent); }
         <tr><td><strong>MoE</strong> · 64K–512K</td><td>Q8/Q8 + pflash + DFlash dm=4</td><td class="num"><strong>64–68</strong></td></tr>
         <tr><td><strong>MoE</strong> · 1M</td><td>TQ3/TQ3 + pflash + MTP γ=2</td><td class="num"><strong>23.7</strong></td></tr>
         <tr><td>Dense · 4K</td><td>Q8/Q8 + DFlash dm=16</td><td class="num">82</td></tr>
-        <tr><td>Dense · 32K–128K</td><td>TQ3/TQ3 + pflash + MTP γ=2</td><td class="num">10</td></tr>
-        <tr><td>Dense · ≥256K</td><td colspan="2" style="color:var(--text-sec);font-style:italic;">infeasible on 24 GB</td></tr>
+        <tr><td><strong>Dense</strong> · 64K–96K</td><td>Q8/Q8 + pflash + MTP γ=2</td><td class="num"><strong>12</strong></td></tr>
+        <tr><td>Dense · 128K</td><td>TQ3/TQ3 + pflash + MTP γ=2</td><td class="num">10</td></tr>
+        <tr><td><strong>Dense</strong> · 192K–256K</td><td>Q4/Q4 + pflash + MTP γ=2</td><td class="num"><strong>8–9</strong></td></tr>
       </tbody>
     </table>
   </section>
@@ -153,7 +154,7 @@ python3 dflash/scripts/server.py \
 
   <footer>
     <p><a href="/">Full evidence, 20 fixes, every measurement →</a></p>
-    <p style="margin-top:0.4rem;">Built May 8–11, 2026 · 101 commits · ggml + git + 24 GB</p>
+    <p style="margin-top:0.4rem;">Built May 8–12, 2026 · 104 commits · ggml + git + 24 GB</p>
   </footer>
 
 </div>
